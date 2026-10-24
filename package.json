@@ -1,0 +1,20 @@
+{
+  "name": "penpot-roblox-importer",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node bridge/server.mjs",
+    "test": "node --test --test-isolation=none tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "description": "Penpot to Roblox Studio UI importer and local desktop helper",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deyyzy-glitch/penpot-roblox-bridge.git"
+  }
+}

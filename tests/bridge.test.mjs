@@ -1,0 +1,32 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createBridge} from '../bridge/server.mjs';
+import {encodePNG} from '../bridge/png.mjs';
+test('loopback bridge authenticates, transfers, validates, and serves only packaged files',async()=>{
+ const {server,token}=createBridge({token:'test-pairing-token-123456'});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ const url=`http://127.0.0.1:${server.address().port}`;
+ const headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
+ try{
+  assert.equal((await fetch(url+'/document')).status,401);
+  assert.equal((await fetch(url+'/document',{headers})).status,404);
+  const d={format:'penpot-roblox',version:1,source:{rootId:'test'},design:{id:'test'}};
+  assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify(d)})).status,200);
+  assert.deepEqual(await (await fetch(url+'/document',{headers})).json(),d);
+  assert.equal((await fetch(url+'/document',{method:'POST',headers,body:'{}'})).status,400);
+  assert.equal((await fetch(url+'/manifest.json')).status,200);
+  assert.equal((await fetch(url+'/../package.json',{headers})).status,404);
+  const manifest=await (await fetch(url+'/manifest.json')).json();assert.equal(manifest.version,2);
+  assert.equal((await fetch(url+'/plugin.js')).status,200);
+  assert.equal((await fetch(url+'/ui.html')).status,200);
+  const png=encodePNG({width:1,height:1,pixels:Buffer.from([11,22,33,128])});
+  const asset=await(await fetch(url+'/assets',{method:'POST',headers,body:JSON.stringify({png:png.toString('base64'),viewBox:[0,0,1,1],shapeWidth:1,shapeHeight:1,rotation:0})})).json();
+  assert.match(asset.hash,/^[a-f0-9]{64}$/);
+  d.assets=[{key:'star',contentHash:asset.hash}];
+  await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify(d)});
+  const bundle=await(await fetch(url+'/bundle',{headers})).json();
+  assert.equal(bundle.assetPayloads[asset.hash].pixels,Buffer.from([11,22,33,128]).toString('base64'));
+  assert.deepEqual(Buffer.from(await(await fetch(url+'/assets/'+asset.hash+'/pixels',{headers})).arrayBuffer()),Buffer.from([11,22,33,128]));
+  const denied=await fetch(url+'/document',{headers:{...headers,Origin:'https://evil.example'}});assert.equal(denied.headers.get('Access-Control-Allow-Origin'),null);
+ }finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
+});

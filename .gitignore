@@ -1,0 +1,11 @@
+.asset-cache/
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+runtime/
+__pycache__/
+*.log
+*.rbxl
+*.rbxlx

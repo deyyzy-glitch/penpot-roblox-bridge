@@ -1,0 +1,12 @@
+import {readFile,writeFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+const root=path.dirname(fileURLToPath(import.meta.url));
+const read=p=>readFile(path.join(root,p),'utf8');
+const xml=s=>s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const source=(name,cls,code,children='')=>`<Item class="${cls}"><Properties><string name="Name">${xml(name)}</string><ProtectedString name="Source">${xml(code)}</ProtectedString>${cls==='Script'?'<bool name="Disabled">false</bool>':''}</Properties>${children}</Item>`;
+const importer=await read('studio/Importer.luau'),ui=await read('studio/UI.luau'),assets=await read('studio/Assets.luau');
+await writeFile(path.join(root,'PenpotRoblox.rbxmx'),`<roblox version="4">${source('PenpotRoblox','Script',await read('studio/Main.server.luau'),source('Importer','ModuleScript',importer)+source('UI','ModuleScript',ui)+source('Assets','ModuleScript',assets))}</roblox>`);
+await writeFile(path.join(root,'PenpotRoblox.plugin.lua'),`-- Generated standalone local plugin. Edit studio/ sources, then run node build.mjs.\nlocal Importer=(function()\n${importer}\nend)()\nlocal Assets=(function()\n${assets}\nend)()\nlocal createUI=(function()\n${ui}\nend)()\nassert(plugin,'Install as a Studio plugin')\ncreateUI(plugin,Importer,Assets)\n`);
+await writeFile(path.join(root,'penpot/plugin.js'),await read('penpot/exporter.js')+'\n'+await read('penpot/plugin-tail.js'));
+console.log('Built PenpotRoblox.rbxmx, standalone plugin, and Penpot companion.');
