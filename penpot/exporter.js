@@ -51,9 +51,9 @@ globalThis.P2R = (() => {
     const behaviors=options.behaviors===true,preferNativeGroups=options.nativeGroups!==false;
     if(options.runtimeThemes&&options.tokens===false)throw Error('Enable token bindings to generate a theme module.');
     const smoothing=options.smoothing==null?0:Number(options.smoothing);if(!Number.isFinite(smoothing)||smoothing<0||smoothing>1)throw Error('Invalid corner smoothing.');
-    if (selection.length !== 1) throw Error('Select exactly one board, component, or group.');
+    if (selection.length !== 1) throw Error('Select exactly one layer, group, or board.');
     const root = selection[0];
-    if (!['board', 'group'].includes(root.type)) throw Error('Select a board, component board, or group.');
+    if (!['board','group','rectangle','text','ellipse','path','boolean','svg-raw','image'].includes(root.type)) throw Error('Select a supported design layer, group, or board.');
     const warnings = [], assets = [], shapes = new Map();
     const markupCache=new Map(),markupFor=typeof api.generateMarkup==='function'?shape=>{if(!markupCache.has(shape.id))markupCache.set(shape.id,api.generateMarkup([shape],{type:'svg'}));return markupCache.get(shape.id)}:null;
     const warn = (s, text) => warnings.push(`${s.name} (${s.id}): ${text}`);

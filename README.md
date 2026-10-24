@@ -1,6 +1,6 @@
 # Penpot Bridge
 
-Import Penpot boards into Roblox Studio UI, review changes, and synchronize updates while preserving local edits and native object references. Open source under the MIT license.
+Import Penpot layers, groups, and boards into Roblox Studio UI, review changes, and synchronize updates while preserving local edits and native object references. Open source under the MIT license.
 
 ## Get started on Windows
 
@@ -8,16 +8,16 @@ Import Penpot boards into Roblox Studio UI, review changes, and synchronize upda
 2. [Download the desktop helper](https://github.com/deyyzy-glitch/penpot-roblox-bridge/releases/latest/download/PenpotBridge-Windows-x64.zip). Extract the entire ZIP, then double-click **Start-Penpot-Bridge.cmd**. Node.js is bundled; no separate installation is needed.
 3. Keep its **Penpot Bridge** window open while importing. The setup page opens in your browser and shows whether image uploads are ready.
 4. In Penpot's Plugin Manager, add `http://127.0.0.1:43129/manifest.json` and open **Penpot to Roblox**.
-5. Select one board or group. Click **Prepare selected design**, then **Send to Studio**.
+5. Select one layer, group, or board. Click **Prepare selected design**, then **Send to Studio**.
 6. In Studio, open **Plugins → Penpot Bridge**, choose **Receive from Penpot**, **Review import**, then **Import design**.
 
 If Roblox asks to contact **127.0.0.1**, it is asking to contact the helper on your own PC. Allow that connection to transfer designs. Your finished game does not need the helper.
 
 The Windows download is a portable application, not an installer or a tray app. It does not automatically start at login. Run its launcher again after restarting your computer. Each person runs their own helper and uses their own Roblox credentials. No developer key is bundled.
 
-## Updating to 2.4.1
+## Updating to 2.4.2
 
-Update the Studio plugin and download the latest helper ZIP. Close the old helper, extract the entire new ZIP, and run its launcher. Restart Studio and reopen the Penpot companion. If token export lacks permission, update or reinstall **Penpot to Roblox** from `http://127.0.0.1:43129/manifest.json` and approve library read access. Enter your own image upload key locally after a helper restart if needed.
+This update adds direct preparation of individual layers without grouping them first. The Studio plugin remains compatible at 2.4.1. Download the latest helper ZIP. Close the old helper, extract the entire new ZIP, and run its launcher. Restart Studio and reopen the Penpot companion. If token export lacks permission, update or reinstall **Penpot to Roblox** from `http://127.0.0.1:43129/manifest.json` and approve library read access. Enter your own image upload key locally after a helper restart if needed.
 
 Preparation now shows each layer's progress and times out stalled requests. Eligible self-contained artwork renders locally from SVG instead of depending on Penpot's remote image renderer. Empty SVG definitions are omitted from uploads, imported SVG paints are retained, and Fredoka/Nunito Sans can stay editable using reported Roblox font substitutions. Native text outlines follow the glyphs. See [release notes](RELEASE-NOTES.md) for validation and limitations.
 

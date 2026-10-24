@@ -6,6 +6,21 @@ const sandbox={setTimeout,clearTimeout,TextDecoder:{}};vm.createContext(sandbox)
 function shape(id,type='rectangle',extra={}){return {id,type,name:id,width:100,height:50,center:{x:50,y:25},opacity:null,fills:[],strokes:[],children:[],...extra}}
 const api=root=>({selection:[root],currentFile:{id:'file'},currentPage:{id:'page'}});
 
+test('individual layers export without a temporary group and retain their identity',()=>{
+ for(const type of ['rectangle','text','ellipse','path','boolean','svg-raw','image']){
+  const root=shape('slot-'+type,type,{x:320,y:480,center:{x:370,y:505},fills:[{fillColor:'#123456'}],characters:'Sword',fontFamily:'Arial',fontSize:16,textBounds:{width:45,height:18}});
+  const bundle=sandbox.P2R.exportSelection(api(root)),d=bundle.document;
+  assert.equal(d.source.rootId,root.id);assert.equal(d.design.id,root.id);
+  assert.equal(d.design.type,type);assert.equal(d.design.x,0);assert.equal(d.design.y,0);
+  assert.equal(d.design.width,100);assert.equal(d.design.height,50);
+  assert.equal(root.x,320);assert.equal(root.y,480);
+  if(['path','boolean','svg-raw','image'].includes(type))assert.equal(d.assets[0].shapeId,root.id);
+ }
+ const root=shape('slot');assert.throws(()=>sandbox.P2R.exportSelection(api(root),[]),/exactly one layer/);
+ assert.throws(()=>sandbox.P2R.exportSelection(api(root),[root,root]),/exactly one layer/);
+ assert.throws(()=>sandbox.P2R.exportSelection(api(shape('page','root'))),/supported design layer/);
+});
+
 test('SVG leaf paints omitted by the Penpot fills API become image surfaces',()=>{
  const rect=shape('imported-bar','rectangle'),blank=shape('blank','rectangle'),root=shape('root','board',{children:[rect,blank]}),source=api(root);
  source.generateMarkup=s=>'<svg viewBox="0 0 100 50"><g class="fills"><rect fill="'+(s[0].id==='blank'?'none':'url(#gradient)')+'"/></g></svg>';

@@ -1,3 +1,13 @@
+# Penpot Bridge 2.4.2
+
+- Individual rectangles, text, ellipses, paths, Boolean shapes, SVG artwork and image layers can now be prepared directly. Grouping them first is no longer required.
+- Selection prompts now describe layers, groups and boards. Selecting multiple layers still requires grouping them first.
+- Original layer identities and dimensions are retained, and standalone imports start at their own local origin.
+
+Validation: 34 automated tests pass, including standalone layer types, identity, geometry and raster asset routing. The running helper served the corrected exporter. Live Penpot MCP inspection was unavailable.
+
+Download the updated helper and reopen Penpot to Roblox. Studio plugin 2.4.1 remains compatible and requires no update for this fix. Credentials and local caches are excluded from downloads.
+
 # Penpot Bridge 2.4.1
 
 - Preparation reports the current layer and export format. Time limits release the Prepare button when Penpot or the helper stops responding, and late responses cannot replace a newer preparation.
