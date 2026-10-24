@@ -220,7 +220,7 @@ local function descriptors(d,options)
    p.TextYAlignment=({top=Enum.TextYAlignment.Top,center=Enum.TextYAlignment.Center,bottom=Enum.TextYAlignment.Bottom})[t.verticalAlign] or Enum.TextYAlignment.Top
    p.LineHeight=math.clamp(t.lineHeight or 1.2,1,3)
    local family=(d.fontMap or {})[t.family or '']
-   local known={Arial=Enum.Font.Arial,arial=Enum.Font.Arial,sourcesanspro=Enum.Font.SourceSans,['Source Sans Pro']=Enum.Font.SourceSans,['Roboto']=Enum.Font.Roboto,roboto=Enum.Font.Roboto,['Ubuntu']=Enum.Font.Ubuntu,ubuntu=Enum.Font.Ubuntu,['Gotham']=Enum.Font.Gotham,SourceSans=Enum.Font.SourceSans,BuilderSans=Enum.Font.BuilderSans,RobotoMono=Enum.Font.RobotoMono,RobotoCondensed=Enum.Font.RobotoCondensed}
+   local known={Arial=Enum.Font.Arial,arial=Enum.Font.Arial,sourcesanspro=Enum.Font.SourceSans,['Source Sans Pro']=Enum.Font.SourceSans,['Roboto']=Enum.Font.Roboto,roboto=Enum.Font.Roboto,['Ubuntu']=Enum.Font.Ubuntu,ubuntu=Enum.Font.Ubuntu,['Gotham']=Enum.Font.Gotham,SourceSans=Enum.Font.SourceSans,BuilderSans=Enum.Font.BuilderSans,RobotoMono=Enum.Font.RobotoMono,RobotoCondensed=Enum.Font.RobotoCondensed,FredokaOne=Enum.Font.FredokaOne,Nunito=Enum.Font.Nunito}
    if not family then
     local mapped=known[t.robloxFamily or ''] or known[t.family]
     family=Font.fromEnum(mapped or Enum.Font.Arial).Family
@@ -285,7 +285,7 @@ local function descriptors(d,options)
      if s.strokeStyle and s.strokeStyle~='solid' then warn(n,'Dashed/vector stroke converted to solid.') end
      if s.strokeColorGradient then warn(n,'Stroke gradient omitted.') end
      local align=({inner=Enum.BorderStrokePosition.Inner,outer=Enum.BorderStrokePosition.Outer,center=Enum.BorderStrokePosition.Center})[s.strokeAlignment] or Enum.BorderStrokePosition.Center
-     add(n.id..'::stroke',n.id,'UIStroke',{Name='Penpot Stroke',Color=s.strokeColor and color(s.strokeColor) or Color3.new(0,0,0),Thickness=s.strokeWidth or 1,Transparency=1-opacity*(s.strokeOpacity or 1),ApplyStrokeMode=Enum.ApplyStrokeMode.Border,BorderStrokePosition=align,Enabled=true})
+     add(n.id..'::stroke',n.id,'UIStroke',{Name='Penpot Stroke',Color=s.strokeColor and color(s.strokeColor) or Color3.new(0,0,0),Thickness=s.strokeWidth or 1,Transparency=1-opacity*(s.strokeOpacity or 1),ApplyStrokeMode=text and Enum.ApplyStrokeMode.Contextual or Enum.ApplyStrokeMode.Border,BorderStrokePosition=align,Enabled=true})
     end
    end
    local g=f and f.fillColorGradient

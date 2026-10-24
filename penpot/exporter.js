@@ -20,9 +20,9 @@ globalThis.P2R = (() => {
   }
   function fontMatch(family) {
     const key=String(family||'').toLowerCase().replace(/[\s_-]+/g,'');
-    const native={arial:'Arial',sourcesanspro:'SourceSans',roboto:'Roboto',robotocondensed:'RobotoCondensed',robotomono:'RobotoMono',ubuntu:'Ubuntu',buildersans:'BuilderSans',gotham:'Gotham'};
+    const native={arial:'Arial',sourcesanspro:'SourceSans',roboto:'Roboto',robotocondensed:'RobotoCondensed',robotomono:'RobotoMono',ubuntu:'Ubuntu',buildersans:'BuilderSans',gotham:'Gotham',fredokaone:'FredokaOne',nunito:'Nunito'};
     if(native[key])return {family:native[key],known:true,exact:true};
-    const substitutions={inter:'BuilderSans',interdisplay:'BuilderSans',montserrat:'Gotham',poppins:'Gotham',nunito:'Gotham',opensans:'SourceSans',sourcesans3:'SourceSans',helvetica:'Arial',helveticaneue:'Arial',consolas:'RobotoMono',jetbrainsmono:'RobotoMono'};
+    const substitutions={inter:'BuilderSans',interdisplay:'BuilderSans',montserrat:'Gotham',poppins:'Gotham',nunitosans:'Nunito',opensans:'SourceSans',sourcesans3:'SourceSans',helvetica:'Arial',helveticaneue:'Arial',consolas:'RobotoMono',jetbrainsmono:'RobotoMono',fredoka:'FredokaOne'};
     return {family:substitutions[key]||'Arial',known:!!substitutions[key],exact:false};
   }
   function shouldBakeText(mode,match){if(mode==='live')return false;if(mode==='exact')return !match.exact;return !match.known;}
@@ -55,6 +55,7 @@ globalThis.P2R = (() => {
     const root = selection[0];
     if (!['board', 'group'].includes(root.type)) throw Error('Select a board, component board, or group.');
     const warnings = [], assets = [], shapes = new Map();
+    const markupCache=new Map(),markupFor=typeof api.generateMarkup==='function'?shape=>{if(!markupCache.has(shape.id))markupCache.set(shape.id,api.generateMarkup([shape],{type:'svg'}));return markupCache.get(shape.id)}:null;
     const warn = (s, text) => warnings.push(`${s.name} (${s.id}): ${text}`);
     const copy = o => JSON.parse(JSON.stringify(o));
     const num = (v, fallback = 0) => v != null && Number.isFinite(Number(v)) ? Number(v) : fallback;
@@ -77,6 +78,10 @@ globalThis.P2R = (() => {
       const shadows=copy((s.shadows||[]).filter(v=>!v.hidden));
       const nativeShadows=shadows.length>0&&s.type!=='text'&&fills.some(f=>(f.fillColor||f.fillColorGradient)&&num(f.fillOpacity,1)>0)&&shadows.every(v=>v.color?.color&&!v.color.gradient&&!v.color.image&&['drop-shadow','inner-shadow'].includes(v.style||'drop-shadow'));
       const reasons=[];
+      if(markupFor&&!vector&&!image&&s.type!=='text'&&!s.children?.length&&fills.length===0){
+        const markup=markupFor(s),paint=markup.match(/<g\b[^>]*\bclass="fills"[^>]*>([\s\S]*?)<\/g>/)?.[1]||'';
+        if(/\bfill\s*=\s*["']\s*(?!none\b|transparent\b)[^"']+["']|\bfill\s*:\s*(?!none\b|transparent\b)[^;"']+/i.test(paint))reasons.push('SVG paint not exposed by Penpot');
+      }
       if(fills.length>1)reasons.push('multiple fills');
       if(shadows.length)reasons.push('shadows');
       if(s.blur||s.backgroundBlur)reasons.push('blur');
@@ -164,25 +169,58 @@ globalThis.P2R = (() => {
     }
     const document={format:'penpot-roblox',version,source:{fileId:api.currentFile.id,pageId:api.currentPage.id,rootId:root.id},
       design:visit(root,null,0),warnings,assets,assetMap:{},fontMap:{},options:{textMode,behaviors,nativeGroups:preferNativeGroups,smoothing,runtimeThemes:options.runtimeThemes===true,autoTint:options.autoTint!==false},capabilities:['text-modes','native-groups','behavior-tags','native-effects','flex-layouts','quality-report','smooth-corners','rich-text','tokens','image-controls']};
-    if(options.tokens!==false&&api.library?.local?.tokens)document.tokens=P2RTokens.exportCatalog(api.library.local.tokens,warnings);
+    if(options.tokens!==false){
+      try{const catalog=api.library?.local?.tokens;if(catalog)document.tokens=P2RTokens.exportCatalog(catalog,warnings);}
+      catch(error){
+        if(!/Permission library:read is not granted/i.test(String(error?.message||error)))throw error;
+        warnings.push('Design token definitions were skipped because library read permission is missing. Update or reinstall Penpot to Roblox from the helper manifest and approve library read access to export tokens. Current visual values are still exported.');
+      }
+    }
     if(options.runtimeThemes&&!document.tokens)warnings.push('No token catalog is exposed by this Penpot file; no runtime theme module will be generated.');
     if(behaviors){
       const panels=new Set();const collect=n=>{if(n.behavior.panel){if(panels.has(n.behavior.panel))throw Error('Duplicate panel name: '+n.behavior.panel);panels.add(n.behavior.panel);}n.children.forEach(collect)};collect(document.design);
       const resolve=(n,nearest)=>{const b=n.behavior;nearest=b.panel||nearest;if(n.initiallyClosed&&!b.panel)throw Error(n.name+': [closed] needs a [panel] tag.');if(b.action){if(!b.target)b.target=nearest||'';if(!panels.has(b.target))throw Error(n.name+': action has no matching panel: '+b.target);}n.children.forEach(c=>resolve(c,nearest))};resolve(document.design,'');
     }
-    return {document,shapes};
+    return {document,shapes,generateMarkup:markupFor};
   }
-  async function exportAssets(bundle) {
+  async function exportAssets(bundle,{timeoutMs=30000,onProgress=()=>{}}={}) {
     const result=[];
     for(const a of bundle.document.assets) {
       if(a.kind==='smooth'){result.push({...a});continue;}
       const shape=bundle.shapes.get(a.shapeId);
-      const svg=await shape.export({type:'svg',skipChildren:a.skipChildren});
+      const exportLayer=async options=>{
+        let timer;onProgress(`Exporting ${result.length+1} of ${bundle.document.assets.length}: ${a.name} (${options.type.toUpperCase()})`);
+        try{return await Promise.race([
+          Promise.resolve().then(()=>shape.export(options)),
+          new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Penpot export did not respond within '+Math.ceil(timeoutMs/1000)+' seconds')),timeoutMs)})
+        ])}
+        catch(error){throw Error(`Cannot export "${a.name}" (${a.shapeId}) as ${options.type.toUpperCase()}: ${error?.message||error}. Check that this layer's images and fonts have loaded in Penpot, then prepare again.`)}
+        finally{clearTimeout(timer)}
+      };
+      let svg,localMarkup=false;
+      if(bundle.generateMarkup&&shape.type!=='text'&&(!a.skipChildren||!shape.children?.length)){
+        try{
+          const markup=bundle.generateMarkup(shape);
+          if(typeof markup==='string'&&/<svg\b[^>]*\bviewBox="[^"]+"/.test(markup)){
+            svg=[];for(const char of markup){let cp=char.codePointAt(0);if(cp>=0xD800&&cp<=0xDFFF)cp=0xFFFD;if(cp<128)svg.push(cp);else if(cp<2048)svg.push(192|(cp>>6),128|(cp&63));else if(cp<65536)svg.push(224|(cp>>12),128|((cp>>6)&63),128|(cp&63));else svg.push(240|(cp>>18),128|((cp>>12)&63),128|((cp>>6)&63),128|(cp&63));}
+            localMarkup=true;onProgress(`Reading SVG ${result.length+1} of ${bundle.document.assets.length}: ${a.name}`);
+          }
+        }catch{/* Older Penpot builds can use the regular export API below. */}
+      }
+      if(!svg)svg=await exportLayer({type:'svg',skipChildren:a.skipChildren});
       const header=Array.from(svg.slice(0,1500),v=>String.fromCharCode(v)).join('');
       const match=header.match(/viewBox="([^"]+)"/);if(!match)throw Error('Export has no raster bounds: '+a.name);
       const viewBox=match[1].trim().split(/\s+/).map(Number),scale=Math.min(2,1024/viewBox[2],1024/viewBox[3]);
-      const bytes=await shape.export({type:'png',scale,skipChildren:a.skipChildren});
-      result.push({...a,viewBox,shapeWidth:shape.width,shapeHeight:shape.height,rotation:shape.rotation||0,bytes:Array.from(bytes)});
+      if(viewBox.length!==4||!viewBox.every(Number.isFinite)||viewBox[2]<=0||viewBox[3]<=0)throw Error('Invalid SVG bounds: '+a.name);
+      if(localMarkup){viewBox[0]-=shape.x;viewBox[1]-=shape.y;}
+      const surface={...a,viewBox,shapeWidth:shape.width,shapeHeight:shape.height,rotation:shape.rotation||0};
+      // Self-contained vectors can be rasterized in the companion without a second remote render.
+      // Only inspect ASCII markup here; preserve the original UTF-8 bytes for the UI renderer.
+      // Penpot's plugin sandbox does not expose browser TextDecoder constructors.
+      const svgText=Array.from(svg,byte=>String.fromCharCode(byte)).join(''),localVector=shape.type!=='text'&&!/<(?:[\w-]+:)?(?:text|tspan|textPath|image|foreignObject)\b/i.test(svgText)&&!/@import|(?:https?:|\/\/)/i.test(svgText.replace(/\sxmlns(?::[\w-]+)?\s*=\s*(['"])[\s\S]*?\1/g,''));
+      if(localVector){result.push({...surface,svgBytes:Array.from(svg),renderWarning:a.name+': vector rendered locally from its SVG.'});continue;}
+      try{const bytes=await exportLayer({type:'png',scale,skipChildren:a.skipChildren});result.push({...surface,bytes:Array.from(bytes)});}
+      catch(error){onProgress('Using SVG fallback: '+a.name);result.push({...surface,svgBytes:Array.from(svg),renderWarning:a.name+': Penpot PNG export failed; trying the self-contained SVG locally.',pngError:error.message});}
     }
     return result;
   }

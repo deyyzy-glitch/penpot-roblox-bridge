@@ -2,9 +2,74 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-const sandbox={};vm.createContext(sandbox);for(const f of ['corners.js','tokens.js','exporter.js'])vm.runInContext(await readFile(new URL('../penpot/'+f,import.meta.url),'utf8'),sandbox);
+const sandbox={setTimeout,clearTimeout,TextDecoder:{}};vm.createContext(sandbox);for(const f of ['corners.js','tokens.js','exporter.js'])vm.runInContext(await readFile(new URL('../penpot/'+f,import.meta.url),'utf8'),sandbox);
 function shape(id,type='rectangle',extra={}){return {id,type,name:id,width:100,height:50,center:{x:50,y:25},opacity:null,fills:[],strokes:[],children:[],...extra}}
 const api=root=>({selection:[root],currentFile:{id:'file'},currentPage:{id:'page'}});
+
+test('SVG leaf paints omitted by the Penpot fills API become image surfaces',()=>{
+ const rect=shape('imported-bar','rectangle'),blank=shape('blank','rectangle'),root=shape('root','board',{children:[rect,blank]}),source=api(root);
+ source.generateMarkup=s=>'<svg viewBox="0 0 100 50"><g class="fills"><rect fill="'+(s[0].id==='blank'?'none':'url(#gradient)')+'"/></g></svg>';
+ const d=sandbox.P2R.exportSelection(source).document;assert.equal(d.assets.length,1);assert.equal(d.assets[0].shapeId,rect.id);assert.match(d.assets[0].reason,/SVG paint not exposed/);
+});
+
+test('local markup bypasses remote SVG export and converts page bounds without browser codecs',async()=>{
+ const vector=shape('crystal','path',{x:104,y:88,export:()=>{throw Error('remote renderer stalled')}}),root=shape('root','board',{children:[vector]});
+ const source=api(root),svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 84 32 24"><title>épée 😀</title><path d="M104 88h8v8z"/></svg>';
+ source.generateMarkup=()=>svg;const [asset]=await sandbox.P2R.exportAssets(sandbox.P2R.exportSelection(source));
+ assert.equal(asset.viewBox[0],-4);assert.equal(asset.viewBox[1],-4);assert.equal(new TextDecoder().decode(new Uint8Array(asset.svgBytes)),svg);
+});
+
+test('local markup does not accidentally include children in an own-surface export',async()=>{
+ let calls=0;const surface=shape('panel','board',{children:[shape('child')],export:async()=>{calls++;return new TextEncoder().encode('<svg viewBox="0 0 100 50"><rect width="100" height="50"/></svg>')}});
+ await sandbox.P2R.exportAssets({document:{assets:[{shapeId:'panel',name:'Panel',skipChildren:true}]},shapes:new Map([['panel',surface]]),generateMarkup:()=>{throw Error('must not use subtree markup')}});
+ assert.equal(calls,1);
+});
+
+test('unresponsive image exports stop with layer context and progress',async()=>{
+ const vector=shape('stuck','path',{name:'Stuck icon',export:()=>new Promise(()=>{})});
+ const bundle=sandbox.P2R.exportSelection(api(shape('root','board',{children:[vector]}))),progress=[];
+ await assert.rejects(()=>sandbox.P2R.exportAssets(bundle,{timeoutMs:5,onProgress:s=>progress.push(s)}),/Stuck icon.*SVG.*did not respond/);
+ assert.match(progress[0],/1 of 1: Stuck icon \(SVG\)/);
+ vector.export=async({type})=>new TextEncoder().encode(type==='svg'?'<svg viewBox="0 0 100 50"></svg>':'png');
+ assert.equal((await sandbox.P2R.exportAssets(bundle)).length,1,'retry succeeds after a timeout');
+});
+
+test('older installations without library permission still export visual values',()=>{
+ const root=shape('root','board',{fills:[{fillColor:'#123456'}]}),source=api(root);
+ Object.defineProperty(source,'library',{get(){throw Error('Permission library:read is not granted')}});
+ const d=sandbox.P2R.exportSelection(source).document;
+ assert.equal(d.design.fills[0].fillColor,'#123456');assert.equal(d.tokens,undefined);
+ assert.match(d.warnings.join(' '),/library read permission is missing/);
+ assert.equal(sandbox.P2R.exportSelection(source,[root],{tokens:false}).document.warnings.length,0);
+ assert.match(sandbox.P2R.exportSelection(source,[root],{runtimeThemes:true}).document.warnings.join(' '),/no runtime theme module/);
+ const unexpected=api(root);Object.defineProperty(unexpected,'library',{get(){throw Error('Unexpected library error')}});
+ assert.throws(()=>sandbox.P2R.exportSelection(unexpected),/Unexpected library error/);
+});
+
+test('SVG export errors identify the layer and failed format',async()=>{
+ const vector=shape('icon-id','path',{name:'Upgrade icon',export:async()=>{throw Error('http error')}});
+ const bundle=sandbox.P2R.exportSelection(api(shape('root','board',{children:[vector]})));
+ await assert.rejects(()=>sandbox.P2R.exportAssets(bundle),/Upgrade icon.*icon-id.*SVG: http error/);
+});
+
+test('self-contained vectors bypass the stalled remote PNG renderer',async()=>{
+ const calls=[],svg='<svg xmlns="http://www.w3.org/2000/svg" xmlns:penpot="https://penpot.app/xmlns" viewBox="-10 -5 40 20"><title>Enchanted épée 😀</title><path fill="#55AA11" d="M0 0h10v10H0z"/></svg>';
+ const vector=shape('svg-path','path',{export:async({type})=>{calls.push(type);if(type==='png')return new Promise(()=>{});return new TextEncoder().encode(svg)}});
+ const bundle=sandbox.P2R.exportSelection(api(shape('root','board',{children:[vector]}))),[asset]=await sandbox.P2R.exportAssets(bundle,{timeoutMs:5});
+ assert.deepEqual(calls,['svg']);assert.equal(new TextDecoder().decode(new Uint8Array(asset.svgBytes)),svg);assert.equal(asset.viewBox[0],-10);
+});
+
+test('PNG timeout retains its SVG as a fallback and records the original error',async()=>{
+ const surface=shape('panel','rectangle',{blur:{value:2},export:async({type})=>type==='png'?new Promise(()=>{}):new TextEncoder().encode('<svg viewBox="0 0 100 50"><image href="data:image/png;base64,AA=="/></svg>')});
+ const bundle=sandbox.P2R.exportSelection(api(shape('root','board',{children:[surface]}))),[asset]=await sandbox.P2R.exportAssets(bundle,{timeoutMs:5});
+ assert.ok(asset.svgBytes.length>0);assert.match(asset.pngError,/panel.*PNG.*did not respond/);
+});
+
+test('Fredoka remains editable with a declared Fredoka One substitution',()=>{
+ const text=shape('title','text',{characters:'Stats',fontFamily:'Fredoka',fontWeight:700,fontSize:24,textBounds:{width:70,height:30}}),root=shape('root','board',{children:[text]});
+ const d=sandbox.P2R.exportSelection(api(root)).document;assert.equal(d.assets.length,0);assert.equal(d.design.children[0].text.robloxFamily,'FredokaOne');assert.equal(d.design.children[0].text.fontSubstituted,true);
+ assert.equal(sandbox.P2R.exportSelection(api(root),[root],{textMode:'exact'}).document.assets.length,1);
+});
 
 test('mixed styles export native runs without splitting Unicode or losing markup characters',async()=>{
  const {mixedText}=await import('./studio-advanced-fixture.mjs');const text=mixedText(),root=shape('root','board',{children:[text]});const d=sandbox.P2R.exportSelection(api(root)).document;

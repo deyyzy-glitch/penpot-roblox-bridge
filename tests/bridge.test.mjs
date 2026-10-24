@@ -21,7 +21,7 @@ test('loopback bridge authenticates, transfers, validates, and serves only packa
   assert.equal((await fetch(url+'/corners.js')).status,200);
   assert.equal((await fetch(url+'/manifest.json')).status,200);
   assert.equal((await fetch(url+'/../package.json',{headers})).status,404);
-  const manifest=await (await fetch(url+'/manifest.json')).json();assert.equal(manifest.version,2);
+  const manifest=await (await fetch(url+'/manifest.json')).json();assert.equal(manifest.version,2);assert.ok(manifest.permissions.includes('library:read'));
   assert.equal((await fetch(url+'/plugin.js')).status,200);
   assert.equal((await fetch(url+'/ui.html')).status,200);
   const png=encodePNG({width:1,height:1,pixels:Buffer.from([11,22,33,128])});

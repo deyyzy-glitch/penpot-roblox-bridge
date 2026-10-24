@@ -15,6 +15,12 @@ If Roblox asks to contact **127.0.0.1**, it is asking to contact the helper on y
 
 The Windows download is a portable application, not an installer or a tray app. It does not automatically start at login. Run its launcher again after restarting your computer. Each person runs their own helper and uses their own Roblox credentials. No developer key is bundled.
 
+## Updating to 2.4.1
+
+Update the Studio plugin and download the latest helper ZIP. Close the old helper, extract the entire new ZIP, and run its launcher. Restart Studio and reopen the Penpot companion. If token export lacks permission, update or reinstall **Penpot to Roblox** from `http://127.0.0.1:43129/manifest.json` and approve library read access. Enter your own image upload key locally after a helper restart if needed.
+
+Preparation now shows each layer's progress and times out stalled requests. Eligible self-contained artwork renders locally from SVG instead of depending on Penpot's remote image renderer. Empty SVG definitions are omitted from uploads, imported SVG paints are retained, and Fredoka/Nunito Sans can stay editable using reported Roblox font substitutions. Native text outlines follow the glyphs. See [release notes](RELEASE-NOTES.md) for validation and limitations.
+
 ## Automatic images
 
 This Studio build does not support native image asset creation. The helper uses Roblox's official Open Cloud Assets API as a fallback. Open `http://127.0.0.1:43129/setup` and enter your own **Assets Read/Write** key for the account signed into Studio. The key stays in helper memory and is sent only to Roblox. Closing the helper clears it. Never put keys in GitHub issues or source files.

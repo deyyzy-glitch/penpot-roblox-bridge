@@ -1,4 +1,17 @@
-# Penpot Bridge 2.4.0
+# Penpot Bridge 2.4.1
+
+- Preparation reports the current layer and export format. Time limits release the Prepare button when Penpot or the helper stops responding, and late responses cannot replace a newer preparation.
+- Eligible shapes use Penpot's local SVG markup and browser rasterization, avoiding stalled remote SVG/PNG renderers. Page bounds are converted to layer coordinates. SVGs needing external resources or text rendering retain the remote path or report an explicit limitation.
+- Definition-only transparent SVG nodes no longer require empty image uploads. Imported SVG fills missing from Penpot's normal fill properties retain their appearance through image surfaces.
+- Fredoka and Nunito Sans have explicit editable substitutions to Roblox Fredoka One and Nunito. Exact mode still preserves the image-fidelity policy.
+- Native text strokes follow glyphs instead of drawing a rectangle around the label.
+- The companion requests library read permission for tokens; older installations without that permission can still prepare current visual values with a warning.
+
+Validation: 33 automated tests, browser SVG pixel/alpha/bounds checks, and a real detailed-board import in Studio. The board retained 26 editable labels and 66 image surfaces; repeat import reported zero changes or conflicts.
+
+Update both the helper and Studio plugin. Stop the previous helper before launching the new download, restart Studio, and reopen the Penpot companion. Update or reinstall the Penpot companion from the helper manifest and approve library read access to enable token export. Re-enter your own upload key locally after restarting the helper if new images are needed. No credentials, local caches, test game or design files are included.
+
+## 2.4.0
 
 - Mixed-style text exports as editable RichText runs with escaped markup, Unicode-safe boundaries, font mapping, sizes, weights, colors, transparency and decorations. Unsupported typography retains image fallback.
 - Local-file token sets, raw values, aliases, themes and shape bindings are retained. An optional Penpot Theme ModuleScript applies supported native properties only when your game calls it.

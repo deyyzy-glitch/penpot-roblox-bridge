@@ -1,1 +1,1 @@
-{"name":"Penpot to Roblox","description":"Export native editable Roblox UI with persistent source IDs","version":2,"code":"plugin.js","permissions":["content:read","allow:downloads"]}
+{"name":"Penpot to Roblox","description":"Export native editable Roblox UI with persistent source IDs","version":2,"code":"plugin.js","permissions":["content:read","library:read","allow:downloads"]}

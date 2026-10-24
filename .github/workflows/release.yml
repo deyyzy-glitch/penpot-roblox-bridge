@@ -22,7 +22,7 @@ jobs:
         run: |
           node build.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --test --test-isolation=none tests/bridge.test.mjs tests/exporter.test.mjs tests/cloud.test.mjs tests/image-tools.test.mjs
+          node --test --test-isolation=none tests/*.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package source and portable Windows helper
         run: python scripts/release.py --windows

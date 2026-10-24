@@ -1,5 +1,34 @@
 /* Explicit image controls. All previews use the processed pixels sent to Studio. */
 globalThis.P2RImageEditor=(()=>{
+ async function rasterizeSVG(a){
+  const text=new TextDecoder().decode(new Uint8Array(a.svgBytes));
+  const reject=reason=>{throw Error('Cannot render "'+a.name+'" locally: '+reason+(a.pngError?' Original PNG error: '+a.pngError:''))};
+  if(/<!DOCTYPE|<\?xml-stylesheet/i.test(text))reject('SVG depends on an external document.');
+  const parsed=new DOMParser().parseFromString(text,'image/svg+xml'),root=parsed.documentElement;
+  if(parsed.querySelector('parsererror')||root.localName!=='svg')reject('invalid SVG.');
+  const internal=value=>value.startsWith('#')||/^data:image\/(?:png|jpeg|webp|gif);base64,/i.test(value);
+  for(const node of parsed.querySelectorAll('*')){
+   if(['script','foreignobject','text','tspan','textpath','animate','animatetransform','animatemotion','set'].includes(node.localName.toLowerCase()))reject('this SVG needs text, animation, or embedded HTML support from Penpot.');
+   for(const attribute of node.attributes){
+    if(/^on/i.test(attribute.localName))reject('unsupported SVG event attributes.');
+    if(['href','src'].includes(attribute.localName)&&!internal(attribute.value.trim()))reject('an image or reference is not embedded.');
+   }
+   const css=node.localName==='style'?node.textContent:node.getAttribute('style')||'';
+   if(/@import/i.test(css))reject('an external stylesheet is required.');
+   for(const value of [css,...Array.from(node.attributes,a=>a.value)])for(const match of value.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi))if(!internal(match[2].trim()))reject('an external image, font or filter is required.');
+  }
+  const box=a.viewBox;if(!Array.isArray(box)||box.length!==4||!box.every(Number.isFinite)||box[2]<=0||box[3]<=0)reject('invalid image bounds.');
+  const scale=Math.min(2,1024/box[2],1024/box[3]),width=Math.max(1,Math.ceil(box[2]*scale)),height=Math.max(1,Math.ceil(box[3]*scale));
+  root.setAttribute('width',String(width));root.setAttribute('height',String(height));
+  const url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(root)],{type:'image/svg+xml'}));let timer;
+  try{
+   const image=new Image();await new Promise((resolve,reject)=>{timer=setTimeout(()=>reject(Error('Local SVG rendering timed out: '+a.name)),10000);image.onload=resolve;image.onerror=()=>reject(Error('Local SVG rendering failed: '+a.name));image.src=url});clearTimeout(timer);
+   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.getContext('2d').drawImage(image,0,0,width,height);
+   const blob=await new Promise((resolve,reject)=>{timer=setTimeout(()=>reject(Error('Local PNG encoding timed out: '+a.name)),10000);canvas.toBlob(value=>value?resolve(value):reject(Error('Local PNG encoding failed: '+a.name)),'image/png')});
+   const rgba=canvas.getContext('2d').getImageData(0,0,width,height).data;let empty=true;for(let i=3;i<rgba.length;i+=4)if(rgba[i]){empty=false;break}
+   return {...a,bytes:new Uint8Array(await blob.arrayBuffer()),empty};
+  }finally{clearTimeout(timer);URL.revokeObjectURL(url)}
+ }
  const element=(tag,parent,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;parent.append(e);return e};
  function drawSlice(ctx,img,rect,scale,w,h){
   const [l,t,x2,y2]=rect,r=img.width-x2,b=img.height-y2,fit=Math.min(1,w/Math.max(1,(l+r)*scale),h/Math.max(1,(t+b)*scale));
@@ -14,6 +43,7 @@ globalThis.P2RImageEditor=(()=>{
   const number=(parent,label,value,min,max)=>{const line=element('label',parent,label+' '),input=element('input',line);input.type='number';input.min=min;input.max=max;input.value=value;input.oninput=dirty;return input};
   async function process(s){
    const a=s.asset,n=s.node,options={tint:s.tint?.checked??s.autoTint,dilate:s.dilate?.checked||false};
+   if(s.rendered.empty&&n.type==='svg-raw'&&!n.children.length){delete n.assetKey;n.rasterSurface=false;n.rasterSubtree=false;doc.assets=doc.assets.filter(v=>v.key!==a.key);s.skip=true;return;}
    if(s.glow?.checked)options.glow={radius:Number(s.radius.value)};
    const v=s.rendered,result=await api.request('/assets','POST',{png:api.base64(new Uint8Array(v.bytes)),viewBox:v.viewBox,shapeWidth:v.shapeWidth,shapeHeight:v.shapeHeight,rotation:v.rotation,options});
    const stored=doc.assets.find(v=>v.key===a.key);stored.contentHash=result.hash;
@@ -37,8 +67,10 @@ globalThis.P2RImageEditor=(()=>{
    }
   }
   for(let i=0;i<assets.length;i++){
-   const a=assets[i],n=nodes.get(a.shapeId),s={asset:a,node:n,rendered:a.kind==='smooth'?await api.smoothPNG(a.spec):a,eligible:a.kind!=='smooth'&&!a.fallback&&!n.rasterSubtree};
+   const a=assets[i],n=nodes.get(a.shapeId);api.status(`Preparing image ${i+1} of ${assets.length}: ${a.name}`);
+   const s={asset:a,node:n,rendered:a.kind==='smooth'?await api.smoothPNG(a.spec):a.svgBytes?await rasterizeSVG(a):a,eligible:a.kind!=='smooth'&&!a.fallback&&!n.rasterSubtree};
    s.autoTint=s.eligible&&doc.options?.autoTint!==false&&['path','boolean','svg-raw','image','ellipse'].includes(n.type);states.push(s);api.status(`Preparing image ${i+1} of ${assets.length}: ${a.name}`);await process(s);
+   if(s.skip)continue;
    if(!s.eligible)continue;
    const card=element('section',container);card.className='card';card.addEventListener('input',()=>s.dirty=true);card.addEventListener('change',()=>s.dirty=true);element('h2',card,a.name);s.note=element('p',card);s.note.className='muted';s.tint=checkbox(card,'Reuse monochrome image as a tintable mask',s.autoTint);s.dilate=checkbox(card,'Experimental RGB edge dilation (alpha unchanged)');s.glow=checkbox(card,'Add a silhouette glow');
    const row=element('div',card);row.className='image-fields';s.radius=number(row,'Glow radius',8,1,32);s.glowOpacity=number(row,'Glow opacity',.7,0,1);s.glowOpacity.step=.1;const gl=element('label',row,'Glow color ');s.glowColor=element('input',gl);s.glowColor.type='color';s.glowColor.value='#85b5ff';s.glowColor.oninput=dirty;
@@ -50,5 +82,5 @@ globalThis.P2RImageEditor=(()=>{
   }
   return {destroy(){for(const url of urls)URL.revokeObjectURL(url);container.replaceChildren()},states};
  }
- return {create,drawSlice};
+ return {create,drawSlice,rasterizeSVG};
 })();
