@@ -1,5 +1,6 @@
 -- No network, plugin globals, or game logic. All source-driven writes are explicit.
 local Http = game:GetService('HttpService')
+local Behaviors=require(script.Parent.Behaviors)
 local Importer = {}
 local measurementCache={}
 local function color(s)
@@ -26,14 +27,16 @@ local function locked(i,p)
  return false
 end
 function Importer.validate(d)
- assert(type(d)=='table' and d.format=='penpot-roblox' and d.version==1,'Unsupported document format/version')
+ assert(type(d)=='table' and d.format=='penpot-roblox' and (d.version==1 or d.version==2),'Unsupported document format/version. Update the Studio plugin for newer exports.')
  assert(type(d.source)=='table','Missing source')
  for _,k in {'fileId','pageId','rootId'} do assert(type(d.source[k])=='string' and #d.source[k]>0 and #d.source[k]<200,'Invalid source '..k) end
  assert(type(d.design)=='table' and d.design.id==d.source.rootId,'Root identity mismatch')
+ assert(d.options==nil or type(d.options)=='table','Invalid document options')
+ if d.options then assert(d.options.behaviors==nil or type(d.options.behaviors)=='boolean','Invalid behavior opt-in')end
  assert(type(d.assetMap or {})=='table' and type(d.fontMap or {})=='table','Invalid mapping tables')
  for k,v in pairs(d.assetMap or {}) do assert(type(k)=='string' and type(v)=='string' and v:match('^rbxassetid://%d+$'),'Asset map values must be rbxassetid://NUMBER') end
  for k,v in pairs(d.fontMap or {}) do assert(type(k)=='string' and type(v)=='string' and (v:match('^rbxasset://fonts/families/[%w_-]+%.json$') or v:match('^rbxassetid://%d+$')),'Invalid font family URI') end
- local ids,count={},0
+ local ids,count,panels,actions={},0,{},{}
  local types={board=true,group=true,rectangle=true,text=true,ellipse=true,path=true,boolean=true,['svg-raw']=true,image=true}
  local function walk(n,depth)
   count+=1; assert(count<=5000 and depth<=64,'Document exceeds shape/depth limit')
@@ -45,6 +48,17 @@ function Importer.validate(d)
   number(n.opacity or 1,0,1,'opacity'); number(n.radius or 0,0,100000,'radius')
   assert(type(n.children)=='table' and type(n.fills or {})=='table' and type(n.strokes or {})=='table','Invalid children/style arrays')
   if n.assetKey then assert(type(n.assetKey)=='string','Invalid asset key') end
+  for _,field in {'nativeGroup','scroll','initiallyClosed'} do assert(n[field]==nil or type(n[field])=='boolean','Invalid '..field) end
+  assert(not n.nativeGroup or (not n.assetKey and n.clip==true and not n.button and not n.scroll and n.type~='text'),'Native group requires a clipped native container')
+  assert(not n.scroll or (not n.assetKey and not n.button and n.type~='text'),'Scrolling requires a native container')
+  if n.behavior then
+   assert(type(n.behavior)=='table','Invalid behavior metadata')
+   for _,field in {'panel','action','target'} do assert(type(n.behavior[field])=='string' and #n.behavior[field]<=128,'Invalid behavior '..field) end
+   local b=n.behavior;assert(b.action=='' or b.action=='open' or b.action=='close','Unsupported action')
+   if b.panel~='' then assert(not panels[b.panel],'Duplicate panel name');panels[b.panel]=true end
+   if b.action~='' then assert(n.button,'Panel action must be a button');table.insert(actions,b.target) end
+   assert(not n.initiallyClosed or b.panel~='','Closed state requires a panel')
+  end
   if n.rasterBounds then for _,k in {'x','y'} do number(n.rasterBounds[k],-1000000,1000000,'raster '..k) end;for _,k in {'width','height'} do number(n.rasterBounds[k],0,1000000,'raster '..k) end end
   for _,f in ipairs(n.fills or {}) do
    if f.fillColor then color(f.fillColor) end
@@ -73,6 +87,7 @@ function Importer.validate(d)
   for _,c in ipairs(n.children) do walk(c,depth+1) end
  end
  walk(d.design,0)
+ for _,target in actions do assert(panels[target],'Panel action target does not exist: '..target) end
  return count
 end
 local function axis(pos,size,parentSize,constraint)
@@ -85,8 +100,8 @@ end
 local function descriptors(d,options)
  local result,warnings={},table.clone(d.warnings or {})
  local function warn(n,s) table.insert(warnings,n.name..': '..s) end
- local function add(id,parent,class,props)
-  local item={id=id,parent=parent,class=class,props=props}
+ local function add(id,parent,class,props,attributes)
+  local item={id=id,parent=parent,class=class,props=props,attributes=attributes}
   -- Validate every engine property on detached instances before any scene mutation.
   local probe=Instance.new(class)
   local ok,e=pcall(function()
@@ -98,13 +113,16 @@ local function descriptors(d,options)
   if #result%100==0 then task.wait() end
  end
  local z=0
+ local hasActions=false
  local function walk(n,parent,parentNode,inheritedOpacity)
   z+=1
-  local opacity=inheritedOpacity*(n.opacity or 1)
+  local nativeGroup=n.nativeGroup==true
+  local scroll=n.scroll==true and d.options and d.options.behaviors==true
+  local opacity=nativeGroup and 1 or inheritedOpacity*(n.opacity or 1)
   local text=n.type=='text'
   local raster=n.assetKey~=nil
   local image=raster and not n.rasterSurface
-  local class=text and (n.button and 'TextButton' or 'TextLabel') or (image and (n.button and 'ImageButton' or 'ImageLabel') or (n.button and 'TextButton' or 'Frame'))
+  local class=scroll and 'ScrollingFrame' or nativeGroup and 'CanvasGroup' or text and (n.button and 'TextButton' or 'TextLabel') or (image and (n.button and 'ImageButton' or 'ImageLabel') or (n.button and 'TextButton' or 'Frame'))
   local f=(n.fills or {})[1]
   local psx,px,ssx,sx=axis(n.x,n.width,parentNode and parentNode.width or n.width,options.responsive and n.constraints and n.constraints.horizontal)
   local psy,py,ssy,sy=axis(n.y,n.height,parentNode and parentNode.height or n.height,options.responsive and n.constraints and n.constraints.vertical)
@@ -126,7 +144,11 @@ local function descriptors(d,options)
    BackgroundTransparency=(text or raster or n.visualSuppressed or not f) and 1 or 1-opacity*(f.fillOpacity or 1),
    ClipsDescendants=n.clip==true and not raster,AutomaticSize=Enum.AutomaticSize.None}
   if n.clip and n.rotation~=0 then warn(n,'Roblox clipping with rotated objects may differ.') end
-  if n.opacity and n.opacity<1 and #n.children>0 then warn(n,'Container opacity is multiplied into descendants; overlapping children may composite differently.') end
+  if n.opacity and n.opacity<1 and #n.children>0 and not nativeGroup and not raster then warn(n,'Container opacity is multiplied into descendants; overlapping children may composite differently.') end
+  if nativeGroup then p.GroupTransparency=1-inheritedOpacity*(n.opacity or 1);p.GroupColor3=Color3.new(1,1,1) end
+  if scroll then p.ClipsDescendants=true;p.ScrollingDirection=Enum.ScrollingDirection.Y;p.AutomaticCanvasSize=Enum.AutomaticSize.Y;p.CanvasSize=UDim2.new();p.ScrollBarThickness=6 end
+  local behavior=d.options and d.options.behaviors and n.behavior or nil
+  if behavior and n.initiallyClosed then p.Visible=false end
   if class=='TextButton' or class=='ImageButton' then p.AutoButtonColor=false end
   if class=='TextButton' then p.Text='' end
   if text then
@@ -141,10 +163,11 @@ local function descriptors(d,options)
    p.TextYAlignment=({top=Enum.TextYAlignment.Top,center=Enum.TextYAlignment.Center,bottom=Enum.TextYAlignment.Bottom})[t.verticalAlign] or Enum.TextYAlignment.Top
    p.LineHeight=math.clamp(t.lineHeight or 1.2,1,3)
    local family=(d.fontMap or {})[t.family or '']
-   local known={Arial=Enum.Font.Arial,arial=Enum.Font.Arial,sourcesanspro=Enum.Font.SourceSans,['Source Sans Pro']=Enum.Font.SourceSans,['Roboto']=Enum.Font.Roboto,roboto=Enum.Font.Roboto,['Ubuntu']=Enum.Font.Ubuntu,ubuntu=Enum.Font.Ubuntu,['Gotham']=Enum.Font.Gotham}
+   local known={Arial=Enum.Font.Arial,arial=Enum.Font.Arial,sourcesanspro=Enum.Font.SourceSans,['Source Sans Pro']=Enum.Font.SourceSans,['Roboto']=Enum.Font.Roboto,roboto=Enum.Font.Roboto,['Ubuntu']=Enum.Font.Ubuntu,ubuntu=Enum.Font.Ubuntu,['Gotham']=Enum.Font.Gotham,SourceSans=Enum.Font.SourceSans,BuilderSans=Enum.Font.BuilderSans,RobotoMono=Enum.Font.RobotoMono,RobotoCondensed=Enum.Font.RobotoCondensed}
    if not family then
-    family=Font.fromEnum(known[t.family] or Enum.Font.Arial).Family
-    if not known[t.family] and not raster then warn(n,'Font '..tostring(t.family)..' substituted with Arial; map a Roblox font family URI for a closer match.') end
+    local mapped=known[t.robloxFamily or ''] or known[t.family]
+    family=Font.fromEnum(mapped or Enum.Font.Arial).Family
+    if not mapped and not raster then warn(n,'Font '..tostring(t.family)..' substituted with Arial; map a Roblox font family URI for a closer match.') end
    end
    local weights={Enum.FontWeight.Thin,Enum.FontWeight.ExtraLight,Enum.FontWeight.Light,Enum.FontWeight.Regular,Enum.FontWeight.Medium,Enum.FontWeight.SemiBold,Enum.FontWeight.Bold,Enum.FontWeight.ExtraBold,Enum.FontWeight.Heavy}
    p.FontFace=Font.new(family,weights[math.clamp(math.floor((t.weight or 400)/100+.5),1,9)],t.italic and Enum.FontStyle.Italic or Enum.FontStyle.Normal)
@@ -174,7 +197,8 @@ local function descriptors(d,options)
   if image then
    p.Image='';p.ImageColor3=Color3.new(1,1,1);p.ImageTransparency=1;p.ScaleType=Enum.ScaleType.Stretch
   end
-  add(n.id,parent,class,p)
+  if behavior and behavior.action~='' then hasActions=true end
+  add(n.id,parent,class,p,{P2R_Panel=behavior and behavior.panel or '',P2R_Action=behavior and behavior.action or '',P2R_Target=behavior and behavior.target or ''})
   if raster then
    local asset=(d.assetMap or {})[n.assetKey]
    local b=n.rasterBounds or {x=0,y=0,width=n.width,height=n.height}
@@ -220,6 +244,10 @@ local function descriptors(d,options)
   for _,c in ipairs(n.children) do walk(c,n.id,n,opacity) end
  end
  walk(d.design,nil,nil,1)
+ if hasActions then
+  add(d.design.id..'::controller',nil,'LocalScript',{Name='Penpot Bridge Controller',Source=Behaviors.source(),Disabled=false})
+  table.insert(warnings,'Optional panel actions generate one LocalScript. Existing gameplay scripts remain untouched.')
+ end
  return result,warnings
 end
 function Importer.prepare(d,target,options)
@@ -232,6 +260,13 @@ function Importer.prepare(d,target,options)
   if i:GetAttribute('P2R_Design')==key then assert(not wrapper,'Duplicate imported design containers; resolve manually');wrapper=i end
  end
  local items,warnings=descriptors(d,options)
+ local nativeGroups=false
+ for _,item in items do if item.class=='CanvasGroup' then nativeGroups=true end end
+ if nativeGroups and target~=game:GetService('StarterGui') then
+  local screen=target:IsA('ScreenGui') and target or target:FindFirstAncestorWhichIsA('ScreenGui')
+  assert(not screen or screen.ZIndexBehavior==Enum.ZIndexBehavior.Sibling,'Native opacity groups need a ScreenGui with ZIndexBehavior Sibling. Import into StarterGui or disable native groups in Penpot and re-export.')
+ end
+ if nativeGroups then table.insert(warnings,'Native opacity groups use CanvasGroup and sibling Z ordering. New group classes need confirmation when updating an older import.') end
  local index={}
  if wrapper then
   for _,i in wrapper:GetDescendants() do
@@ -249,6 +284,7 @@ function Importer.prepare(d,target,options)
   local action=kind
   if kind=='add' then stats.added+=1 elseif kind=='class' then stats.classChanges+=1 else
    local last=decode(old:GetAttribute('P2R_Last'));local modified=false
+   for attribute,value in pairs(item.attributes or {}) do if old:GetAttribute(attribute)~=value then modified=true end end
    for prop,value in pairs(item.props) do
     if signature(old[prop])~=signature(value) then
      if locked(old,prop) or (last[prop] and signature(old[prop])~=last[prop] and not options.force) then
@@ -265,7 +301,7 @@ function Importer.prepare(d,target,options)
  for id,old in pairs(index) do
   if not wanted[id] and not old:GetAttribute('P2R_Stale') then stats.removed+=1;table.insert(changes,{id=id,name=old.Name,action='retain stale'}) end
  end
- return {document=d,target=target,options=options,key=key,wrapper=wrapper,index=index,items=items,wanted=wanted,stats=stats,warnings=warnings,changes=changes}
+ return {document=d,target=target,options=options,key=key,wrapper=wrapper,index=index,items=items,wanted=wanted,stats=stats,warnings=warnings,changes=changes,nativeGroups=nativeGroups}
 end
 function Importer.apply(plan,onProgress)
  assert(plan.stats.classChanges==0 or plan.options.allowClassChanges,'Class changes require confirmation; old objects will be retained')
@@ -281,6 +317,7 @@ function Importer.apply(plan,onProgress)
    else wrapper.BackgroundTransparency=1;wrapper.BorderSizePixel=0;wrapper.Size=UDim2.fromScale(1,1) end
    wrapper:SetAttribute('P2R_Design',plan.key);wrapper.Parent=plan.target
   end
+  if plan.nativeGroups and wrapper:IsA('ScreenGui') then wrapper.ZIndexBehavior=Enum.ZIndexBehavior.Sibling end
   local resolved={}
   for ix,item in ipairs(plan.items) do
    local i=item.existing
@@ -295,6 +332,9 @@ function Importer.apply(plan,onProgress)
    if fresh then i=Instance.new(item.class);i:SetAttribute('P2R_Id',item.id) end
    i:SetAttribute('P2R_Source',plan.key)
    local last=decode(i:GetAttribute('P2R_Last'))
+   if i:IsA('LocalScript') and i:GetAttribute('P2R_DisabledByImporter') then
+    i.Disabled=i:GetAttribute('P2R_PreStaleDisabled')==true;i:SetAttribute('P2R_DisabledByImporter',nil);i:SetAttribute('P2R_PreStaleDisabled',nil)
+   end
    if i:GetAttribute('P2R_HiddenByImporter') then
     if i:IsA('GuiObject') then i.Visible=i:GetAttribute('P2R_PreStaleVisible')~=false end
     if i:IsA('UIGradient') or i:IsA('UIStroke') then i.Enabled=true end
@@ -305,6 +345,7 @@ function Importer.apply(plan,onProgress)
      i[prop]=value;last[prop]=signature(i[prop])
     end
    end
+   for attribute,value in pairs(item.attributes or {}) do i:SetAttribute(attribute,value) end
    i:SetAttribute('P2R_Last',Http:JSONEncode(last));i:SetAttribute('P2R_Stale',nil)
    i.Parent=item.parent and resolved[item.parent] or wrapper
    resolved[item.id]=i
@@ -314,6 +355,9 @@ function Importer.apply(plan,onProgress)
   for id,i in pairs(plan.index) do
    if not plan.wanted[id] then
     i:SetAttribute('P2R_Stale',true)
+    if i:IsA('LocalScript') and not i:GetAttribute('P2R_DisabledByImporter') then
+     i:SetAttribute('P2R_PreStaleDisabled',i.Disabled);i:SetAttribute('P2R_DisabledByImporter',true);i.Disabled=true
+    end
     if plan.options.hideRemoved then
      if i:IsA('GuiObject') and not i:GetAttribute('P2R_HiddenByImporter') then
       i:SetAttribute('P2R_PreStaleVisible',i.Visible);i:SetAttribute('P2R_HiddenByImporter',true);i.Visible=false
@@ -327,7 +371,7 @@ function Importer.apply(plan,onProgress)
     end
    end
   end
-  wrapper:SetAttribute('P2R_Version',1)
+  wrapper:SetAttribute('P2R_Version',plan.document.version)
   return wrapper
  end)
  history:FinishRecording(recording,ok and Enum.FinishRecordingOperation.Commit or Enum.FinishRecordingOperation.Cancel)

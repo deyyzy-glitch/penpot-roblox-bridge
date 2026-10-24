@@ -3,7 +3,7 @@ let lastBundle;
 penpot.ui.onMessage(async message => {
   try {
     if(message?.type === 'export') {
-      lastBundle=P2R.exportSelection(penpot);
+      lastBundle=P2R.exportSelection(penpot,[...penpot.selection],message.options||{});
       penpot.ui.sendMessage({type:'document',document:lastBundle.document});
     } else if(message?.type === 'assets') {
       if(!lastBundle) throw Error('Export the selection first.');

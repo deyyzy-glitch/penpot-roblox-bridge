@@ -45,7 +45,7 @@ export function createBridge({token=crypto.randomBytes(24).toString('hex'),stora
    }
    if(url.pathname==='/document'){
     if(req.method==='GET')return reply(document?200:404,document||{error:'Send a design from Penpot first'});
-    if(req.method==='POST'){const d=await body(64000000);if(d.format!=='penpot-roblox'||d.version!==1||!d.source?.rootId||d.source.rootId!==d.design?.id)throw Error('Invalid document envelope');document=d;return reply(200,{ok:true})}
+    if(req.method==='POST'){const d=await body(64000000);if(d.format!=='penpot-roblox'||![1,2].includes(d.version)||!d.source?.rootId||d.source.rootId!==d.design?.id)throw Error('Invalid document envelope. Update both the helper and Studio plugin for newer exports.');document=d;return reply(200,{ok:true})}
    }
    if(url.pathname==='/assets'&&req.method==='POST'){
     const a=await body(),png=Buffer.from(a.png||'','base64');

@@ -23,6 +23,31 @@ The helper caches image hashes and completed upload IDs per creator. Unchanged i
 
 ## What imports
 
+### Text and native opacity (2.2)
+
+The Penpot companion offers **Auto**, **Editable**, and **Exact** text modes. Auto keeps known fonts or deliberate substitutions editable and reports substitutions. Editable keeps typography native where possible, with warnings for differences. Exact uses image surfaces for unsupported font families or complex typography. Visual effects and complex fills can require images in any mode.
+
+**Keep suitable opacity groups native** uses CanvasGroup for clipped containers with no unsupported effects. Other containers retain the image fallback. Importing these groups into StarterGui configures the imported ScreenGui with sibling Z ordering. An existing destination ScreenGui must already use Sibling, or turn the option off and re-export. Existing Frame-to-CanvasGroup changes still require the class-change option in Studio.
+
+### Optional scrolling and panel actions (2.2)
+
+Enable **scrolling and panel tags** in the Penpot companion before preparing a selection. Tags are removed from displayed instance names, while source IDs stay unchanged.
+
+| Layer name | Result |
+| --- | --- |
+| `Inventory [scroll]` | Vertical ScrollingFrame with automatic canvas extent |
+| `Shop [panel] [closed]` | Named Shop panel, initially hidden |
+| `Window [panel:Shop]` | Explicit panel name independent of displayed name |
+| `Open shop [open:Shop]` | Button showing Shop |
+| `Close [close]` | Button hiding its nearest tagged parent panel |
+| `Close [close:Shop]` | Button hiding the named Shop panel |
+
+Aliases `_scroll`, `_panel`, `_closed`, `_button`, `_open:Shop`, and `_close` are also accepted. Bracket tags are preferred when names already contain underscores. Panel names must be unique in a design. A missing or ambiguous target stops export; it is not guessed.
+
+Panel actions generate one readable LocalScript owned by the importer. It reads fixed attributes and does not execute text supplied by the design. User gameplay scripts and references remain separate. Removing panel actions disables and retains the generated controller. Scrolling does not generate a script. Composited image containers cannot become scrolling containers; simplify the container effects first.
+
+These features require both the **2.2+ Studio plugin and helper**. New exports use document version 2 so older plugins reject unsupported features. Legacy version-1 bundles remain supported. Update the helper by extracting the latest Windows download into a new folder, close the old helper, and run the new launcher. Re-enter your own image key after restarting if needed.
+
 Native frames, labels, buttons, uniform corners, solid strokes, compatible linear gradients, measured desktop positions and simple row/column layouts. Name an element with `[button]` to create a button.
 
 Vectors, image fills and effects that Roblox cannot reproduce use transparent image surfaces. Complex typography and composited group effects can also use surfaces while keeping native controls and geometry. Baked visuals are changed in Penpot and re-exported; they are not editable native effects. Images use up to 2× resolution capped at 1024 pixels per dimension. Complex flex/grid uses measured positions. Desktop workflow only; automatic mobile redesign is outside scope.
@@ -58,4 +83,4 @@ python scripts/release.py
 
 `python scripts/release.py --windows` also downloads an official Node.js 24 Windows x64 runtime, verifies its SHA-256 against Node's published checksum list, and includes its license. The workflow builds and publishes release assets when package.json gains a new version on main. Source archives and releases exclude credentials, local caches and game files.
 
-See [contribution guidance](CONTRIBUTING.md) and [release notes](RELEASE-NOTES.md). This project is independent of Roblox and Penpot.
+See [contribution guidance](CONTRIBUTING.md), [release notes](RELEASE-NOTES.md), and [third-party credits](THIRD-PARTY-NOTICES.md). Parts of text modes and tag parsing are adapted from the MIT-licensed figrbx project. This project is independent of Roblox and Penpot.

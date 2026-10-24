@@ -5,7 +5,7 @@ import hashlib,io,json,re,sys,urllib.request,zipfile
 ROOT=Path(__file__).resolve().parents[1]
 DIST=ROOT/'dist'
 VERSION=json.loads((ROOT/'package.json').read_text(encoding='utf-8-sig'))['version']
-ROOT_FILES={'README.md','LICENSE','CONTRIBUTING.md','RELEASE-NOTES.md','package.json','build.mjs','assets.mjs','Start-Bridge.ps1','Start-Penpot-Bridge.cmd','.gitignore'}
+ROOT_FILES={'README.md','LICENSE','THIRD-PARTY-NOTICES.md','CONTRIBUTING.md','RELEASE-NOTES.md','package.json','build.mjs','assets.mjs','Start-Bridge.ps1','Start-Penpot-Bridge.cmd','.gitignore'}
 FOLDERS={'studio','penpot','bridge','tests','scripts','.github'}
 
 def files():
@@ -39,7 +39,7 @@ def build(windows=False):
         runtime=checked_windows_runtime()
         with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as z:
             for p,rel in files():
-                if rel.parts[0] in {'bridge','penpot'} or rel.name in {'README.md','LICENSE','package.json','Start-Penpot-Bridge.cmd','RELEASE-NOTES.md'}:z.write(p,'PenpotBridge/'+rel.as_posix())
+                if rel.parts[0] in {'bridge','penpot'} or rel.name in {'README.md','LICENSE','THIRD-PARTY-NOTICES.md','package.json','Start-Penpot-Bridge.cmd','RELEASE-NOTES.md'}:z.write(p,'PenpotBridge/'+rel.as_posix())
             for name,data in runtime.items():z.writestr('PenpotBridge/'+name,data)
         outputs.append(target)
     checks=DIST/'SHA256SUMS.txt'

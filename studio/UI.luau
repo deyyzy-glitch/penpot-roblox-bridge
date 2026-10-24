@@ -136,6 +136,11 @@ return function(plugin,Importer,Assets)
   local pending=Assets and #Assets.pending(document,plugin) or 0
   reviewSummary.Text=string.format('%d new  ·  %d changed\n%d unchanged  ·  %d removed',s.added,s.updated,s.unchanged,s.removed)
   local lines={pending>0 and string.format('%d unique images will upload to your Roblox account.',pending) or 'No new image uploads needed.'}
+  if document.options then
+   table.insert(lines,'Text mode: '..tostring(document.options.textMode or 'legacy')..'.')
+   table.insert(lines,document.options.behaviors and 'Scrolling/panel tags enabled. Panel actions add a generated controller.' or 'Optional behavior tags are off.')
+  end
+  if previewPlan.nativeGroups then table.insert(lines,'Suitable opacity groups remain native and editable.') end
   if s.conflicts>0 then table.insert(lines,string.format('%d local overrides will be preserved.',s.conflicts))end
   if s.classChanges>0 then table.insert(lines,string.format('%d object type changes require the option to be enabled.',s.classChanges))end
   if options.force then table.insert(lines,'Design values will overwrite unlocked local appearance changes.')end
