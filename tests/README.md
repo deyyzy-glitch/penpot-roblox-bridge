@@ -1,6 +1,11 @@
 # Verification
 
 Run Node tests with `node --test --test-isolation=none tests/bridge.test.mjs tests/exporter.test.mjs tests/cloud.test.mjs`.
+Include `tests/image-tools.test.mjs` for mask deduplication, alpha-preserving dilation, bounded silhouette blur, processed previews and portable glow payloads.
+
+`studio-advanced-fixture.mjs` creates mixed text, aliases, themes and image-control metadata. Pass Importer and its document to `studio-advanced.luau`. Its eight checks cover RichText escaping/content, tint/glow/slice descriptors, opt-in module generation, aliases, locks, nested import isolation, retained user scripts and invalid metadata. The sandbox is removed afterward.
+
+Runtime verification: import that fixture into a separate blank place, start Play, require its Penpot Theme module from the client and apply Dark. Check the panel color and the RichText label's ContentText. No uploaded test image is required for the text/theme check.
 
 `studio-regression.luau` accepts the Importer module and a dashboard export with the names created by create-penpot-fixture.js. It covers native creation, idempotence, references, scripts, overrides, locks, removal/restoration, class confirmation, separate sources, missing images, invalid data, resize constraints, nested imports and rollback. Its sandbox is removed after the run.
 

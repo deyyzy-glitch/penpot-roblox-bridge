@@ -16,7 +16,8 @@ test('loopback bridge authenticates, transfers, validates, and serves only packa
   assert.equal((await fetch(url+'/document',{method:'POST',headers,body:'{}'})).status,400);
   const v2={...d,version:2};assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify(v2)})).status,200);
   assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify({...d,version:3})})).status,200);
-  assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify({...d,version:4})})).status,400);
+  assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify({...d,version:4})})).status,200);
+  assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify({...d,version:5})})).status,400);
   assert.equal((await fetch(url+'/corners.js')).status,200);
   assert.equal((await fetch(url+'/manifest.json')).status,200);
   assert.equal((await fetch(url+'/../package.json',{headers})).status,404);

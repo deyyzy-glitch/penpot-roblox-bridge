@@ -1,6 +1,8 @@
 -- No network, plugin globals, or game logic. All source-driven writes are explicit.
 local Http = game:GetService('HttpService')
 local Behaviors=require(script.Parent.Behaviors)
+local RichText=require(script.Parent.RichText)
+local Themes=require(script.Parent.Themes)
 local Importer = {}
 local measurementCache={}
 local function nativeVisual(n,capabilities)
@@ -46,12 +48,19 @@ local function locked(i,p)
  return false
 end
 function Importer.validate(d)
- assert(type(d)=='table' and d.format=='penpot-roblox' and (d.version==1 or d.version==2 or d.version==3),'Unsupported document format/version. Update the Studio plugin for newer exports.')
+ assert(type(d)=='table' and d.format=='penpot-roblox' and table.find({1,2,3,4},d.version),'Unsupported document format/version. Update the Studio plugin for newer exports.')
  assert(type(d.source)=='table','Missing source')
  for _,k in {'fileId','pageId','rootId'} do assert(type(d.source[k])=='string' and #d.source[k]>0 and #d.source[k]<200,'Invalid source '..k) end
  assert(type(d.design)=='table' and d.design.id==d.source.rootId,'Root identity mismatch')
  assert(d.options==nil or type(d.options)=='table','Invalid document options')
- if d.options then assert(d.options.behaviors==nil or type(d.options.behaviors)=='boolean','Invalid behavior opt-in')end
+ if d.options then for _,key in {'behaviors','runtimeThemes','autoTint'}do assert(d.options[key]==nil or type(d.options[key])=='boolean','Invalid '..key..' opt-in')end end
+ if d.tokens then
+  assert(type(d.tokens)=='table' and type(d.tokens.palettes)=='table' and type(d.tokens.themes)=='table' and type(d.tokens.sets)=='table','Invalid token catalog')
+  assert(#d.tokens.sets<=64 and #d.tokens.themes<=32 and #Http:JSONEncode(d.tokens)<=2000000,'Token catalog too large')
+  if d.tokens.bindingNames then assert(type(d.tokens.bindingNames)=='table','Invalid token identities');local count=0;for id,name in d.tokens.bindingNames do count+=1;assert(count<=2000 and type(id)=='string' and type(name)=='string' and #id<=200 and #name<=200,'Invalid token identity')end end
+  local palettes=0;for name,p in d.tokens.palettes do palettes+=1;assert(type(name)=='string' and #name<=200 and type(p)=='table','Invalid palette');local count=0;for key,t in p do count+=1;assert(count<=2000 and type(key)=='string' and #key<=200,'Invalid token name');assert(type(t)=='table' and type(t.type)=='string' and (type(t.value)=='string' or finite(t.value)),'Invalid resolved token') end end;assert(palettes<=33,'Too many palettes')
+  for _,t in d.tokens.themes do assert(type(t.id)=='string' and type(t.name)=='string' and type(t.group)=='string' and d.tokens.palettes[t.id],'Invalid theme')end
+ end
  assert(type(d.assetMap or {})=='table' and type(d.fontMap or {})=='table','Invalid mapping tables')
  for k,v in pairs(d.assetMap or {}) do assert(type(k)=='string' and type(v)=='string' and v:match('^rbxassetid://%d+$'),'Asset map values must be rbxassetid://NUMBER') end
  for k,v in pairs(d.fontMap or {}) do assert(type(k)=='string' and type(v)=='string' and (v:match('^rbxasset://fonts/families/[%w_-]+%.json$') or v:match('^rbxassetid://%d+$')),'Invalid font family URI') end
@@ -75,6 +84,10 @@ function Importer.validate(d)
   if n.smooth then assert(type(n.smooth)=='table' and type(n.smooth.key)=='string' and not n.assetKey and type(n.smooth.slice)=='table' and #n.smooth.slice==4,'Invalid smooth surface');for _,v in n.smooth.slice do number(v,0,1024,'slice')end;assert(n.smooth.slice[3]>n.smooth.slice[1] and n.smooth.slice[4]>n.smooth.slice[2],'Empty slice center')end
   assert(type(n.children)=='table' and type(n.fills or {})=='table' and type(n.strokes or {})=='table','Invalid children/style arrays')
   if n.assetKey then assert(type(n.assetKey)=='string','Invalid asset key') end
+  if n.tokens then local count=0;assert(type(n.tokens)=='table','Invalid token bindings');for k,v in n.tokens do count+=1;assert(count<=64 and type(k)=='string' and type(v)=='string' and #v<=200,'Invalid token binding')end end
+  if n.tintColor then color(n.tintColor);assert(n.assetKey and not n.rasterSubtree,'Tint requires an independent image')end
+  if n.slice then assert(n.assetKey and not n.rasterSubtree and type(n.slice.rect)=='table' and #n.slice.rect==4,'Invalid image slice');for _,v in n.slice.rect do number(v,0,1024,'slice edge')end;assert(n.slice.rect[3]>n.slice.rect[1] and n.slice.rect[4]>n.slice.rect[2],'Empty slice center');number(n.slice.scale,.001,1000,'slice scale')end
+  if n.glow then assert(n.assetKey and not n.rasterSubtree and type(n.glow.key)=='string','Glow requires an independent image');color(n.glow.color);number(n.glow.opacity,0,1,'glow opacity');for _,k in {'x','y','width','height'}do number(n.glow.bounds[k],-100000,100000,'glow bounds')end;assert(n.glow.bounds.width>0 and n.glow.bounds.height>0,'Empty glow')end
   for _,field in {'nativeGroup','scroll','initiallyClosed'} do assert(n[field]==nil or type(n[field])=='boolean','Invalid '..field) end
   assert(not n.nativeGroup or (not n.assetKey and n.clip==true and not n.button and not n.scroll and n.type~='text'),'Native group requires a clipped native container')
   assert(not n.scroll or (not n.assetKey and not n.button and n.type~='text'),'Scrolling requires a native container')
@@ -103,6 +116,11 @@ function Importer.validate(d)
   if n.type=='text' then
    local t=n.text;assert(type(t)=='table' and type(t.value)=='string' and #t.value<=100000,'Invalid text')
    number(t.size,1,1000,'font size');number(t.weight or 400,100,1000,'font weight');number(t.lineHeight or 1.2,0,100,'line height')
+   if t.runs then
+    assert(type(t.runs)=='table' and #t.runs>0 and #t.runs<=2048,'Invalid text runs');local joined={}
+    for _,r in t.runs do assert(type(r.value)=='string' and type(r.family)=='string' and type(r.robloxFamily)=='string' and r.robloxFamily:match('^[%w]+$'),'Invalid text run');number(r.size,1,1000,'run size');number(r.weight,100,900,'run weight');assert(r.weight%100==0,'Run weight must be a multiple of 100');color(r.color);number(r.alpha,0,1,'run alpha');assert(table.find({'none','underline','line-through'},r.decoration) and table.find({'none','uppercase','lowercase','capitalize'},r.transform),'Invalid run formatting');table.insert(joined,r.value)end
+    assert(table.concat(joined)==t.value,'Text runs do not match source text')
+   end
    if t.measuredWidth then number(t.measuredWidth,0,1000000,'measured text width');number(t.measuredHeight,0,1000000,'measured text height') end
   end
   if n.layout and n.layout.native then
@@ -148,7 +166,7 @@ local function descriptors(d,options)
  local z=0
  local hasActions=false
  local function walk(n,parent,parentNode,inheritedOpacity)
-  z+=1
+  z+=2
   local nativeGroup=n.nativeGroup==true
   local scroll=n.scroll==true and d.options and d.options.behaviors==true
   local opacity=nativeGroup and 1 or inheritedOpacity*(n.opacity or 1)
@@ -193,9 +211,10 @@ local function descriptors(d,options)
    local t=n.text
    p.Text=t.value
    if t.transform=='uppercase' then p.Text=string.upper(p.Text) elseif t.transform=='lowercase' then p.Text=string.lower(p.Text) elseif t.transform=='capitalize' then warn(n,'Capitalization requires manual review.') end
-   p.RichText=false;p.TextScaled=false;p.TextWrapped=true;p.TextSize=t.size
-   p.TextColor3=f and f.fillColor and color(f.fillColor) or Color3.new(0,0,0)
-   p.TextTransparency=1-opacity*(f and f.fillOpacity or 1)
+   p.RichText=t.runs~=nil and not raster;p.TextScaled=false;p.TextWrapped=true;p.TextSize=t.size
+   if p.RichText then p.Text=RichText.render(t.runs,d.fontMap);p.TextColor3=Color3.new(1,1,1)end
+   p.TextColor3=p.RichText and Color3.new(1,1,1)or(f and f.fillColor and color(f.fillColor) or Color3.new(0,0,0))
+   p.TextTransparency=1-opacity*(p.RichText and 1 or (f and f.fillOpacity or 1))
    p.TextStrokeTransparency=1
    p.TextXAlignment=({left=Enum.TextXAlignment.Left,center=Enum.TextXAlignment.Center,right=Enum.TextXAlignment.Right})[t.align] or Enum.TextXAlignment.Left
    p.TextYAlignment=({top=Enum.TextYAlignment.Top,center=Enum.TextYAlignment.Center,bottom=Enum.TextYAlignment.Bottom})[t.verticalAlign] or Enum.TextYAlignment.Top
@@ -211,7 +230,7 @@ local function descriptors(d,options)
    p.FontFace=Font.new(family,weights[math.clamp(math.floor((t.weight or 400)/100+.5),1,9)],t.italic and Enum.FontStyle.Italic or Enum.FontStyle.Normal)
    -- Roblox TextSize denotes line height, while CSS/Penpot uses font em size.
    -- Match a measured single line, avoiding a guessed universal size multiplier.
-   if not raster and t.measuredWidth and t.measuredWidth>0 and t.measuredWidth<=n.width+.1 and t.measuredHeight<=t.size*1.8 and not t.value:find('\n',1,true) and (t.letterSpacing or 0)==0 then
+   if not raster and not t.runs and t.measuredWidth and t.measuredWidth>0 and t.measuredWidth<=n.width+.1 and t.measuredHeight<=t.size*1.8 and not t.value:find('\n',1,true) and (t.letterSpacing or 0)==0 then
     local cacheKey=signature(p.FontFace)..'/'..t.size..'/'..p.Text..'/'..t.measuredWidth
     if measurementCache[cacheKey] then p.TextSize=measurementCache[cacheKey]
     else
@@ -240,7 +259,10 @@ local function descriptors(d,options)
   if raster then
    local asset=(d.assetMap or {})[n.assetKey]
    local b=n.rasterBounds or {x=0,y=0,width=n.width,height=n.height}
-   add(n.id..'::surface',n.id,'ImageLabel',{Name='Penpot Visual Surface',BackgroundTransparency=1,BorderSizePixel=0,Position=UDim2.fromOffset(b.x,b.y),Size=UDim2.fromOffset(b.width,b.height),Image=asset or '',ImageColor3=Color3.new(1,1,1),ImageTransparency=1-inheritedOpacity,ScaleType=Enum.ScaleType.Stretch,ZIndex=z,Visible=not n.visualSuppressed})
+   local sp={Name='Penpot Visual Surface',BackgroundTransparency=1,BorderSizePixel=0,Position=UDim2.fromOffset(b.x,b.y),Size=UDim2.new(1,b.width-n.width,1,b.height-n.height),Image=asset or '',ImageColor3=n.tintColor and color(n.tintColor)or Color3.new(1,1,1),ImageTransparency=1-inheritedOpacity,ScaleType=Enum.ScaleType.Stretch,ZIndex=z,Visible=not n.visualSuppressed}
+   if n.slice then local s=n.slice.rect;sp.ScaleType=Enum.ScaleType.Slice;sp.SliceCenter=Rect.new(s[1],s[2],s[3],s[4]);sp.SliceScale=n.slice.scale end
+   add(n.id..'::surface',n.id,'ImageLabel',sp)
+   if n.glow then local g=n.glow;local b=g.bounds;add(n.id..'::glow',n.id,'ImageLabel',{Name='Penpot Silhouette Glow',BackgroundTransparency=1,BorderSizePixel=0,Position=UDim2.fromOffset(b.x,b.y),Size=UDim2.new(1,b.width-n.width,1,b.height-n.height),Image=(d.assetMap or {})[g.key]or '',ImageColor3=color(g.color),ImageTransparency=1-inheritedOpacity*g.opacity,ScaleType=Enum.ScaleType.Stretch,ZIndex=z-1,Visible=not n.visualSuppressed})end
    if not asset then warn(n,'Missing Roblox image asset: '..n.assetKey..'. Upload pending images before importing.') end
   end
   if n.smooth and not n.visualSuppressed then
@@ -249,9 +271,10 @@ local function descriptors(d,options)
    if not asset then warn(n,'Missing smooth corner image: '..n.smooth.key)end
   end
   if not raster and not n.smooth and not n.visualSuppressed then
-   if (n.radius or 0)>0 or n.type=='ellipse' or (modern and n.radii) then
+   local cornerTokens=n.tokens and (n.tokens.borderRadiusTopLeft or n.tokens.borderRadiusTopRight or n.tokens.borderRadiusBottomRight or n.tokens.borderRadiusBottomLeft)
+   if (n.radius or 0)>0 or n.type=='ellipse' or (modern and n.radii)or cornerTokens then
     local cp={Name='Penpot Corner'}
-    if modern and capabilities.corners and n.radii then for index,key in {'TopLeftRadius','TopRightRadius','BottomRightRadius','BottomLeftRadius'}do cp[key]=UDim.new(0,n.radii[index])end
+    if (modern or cornerTokens)and capabilities.corners and n.radii then for index,key in {'TopLeftRadius','TopRightRadius','BottomRightRadius','BottomLeftRadius'}do cp[key]=UDim.new(0,n.radii[index])end
     else cp.CornerRadius=n.type=='ellipse' and UDim.new(.5,0) or UDim.new(0,n.radius)end
     add(n.id..'::corner',n.id,'UICorner',cp)
    end
@@ -302,9 +325,35 @@ local function descriptors(d,options)
   if substituted then quality.fonts+=1 end
   if n.layout and n.layout.native and not raster then quality.layouts+=1 end
   table.insert(quality.items,{name=n.name,id=n.id,mode=mode,detail=(substituted and ('Font: '..n.text.family..' → '..n.text.robloxFamily)or modern and 'Native effects; compatibility image unused' or n.smooth and 'Smoothed 9-slice image; native children' or raster and 'Image appearance; source geometry retained' or n.visualSuppressed and 'Appearance included in ancestor image' or 'Editable native appearance')..(n.layout and (n.layout.native and not raster and '; native layout' or '; measured positions')or '')})
+  local detail=quality.items[#quality.items];if text and n.text.runs and not raster then detail.detail..='; RichText runs' end;if n.tintColor then detail.detail..='; tintable mask'end;if n.glow then detail.detail..='; baked silhouette glow'end;if n.slice then detail.detail..='; explicit nine-slice'end;if n.tokens and next(n.tokens)then detail.detail..='; token bindings retained'end
   for _,c in ipairs(n.children) do walk(c,n.id,n,opacity) end
  end
  walk(d.design,nil,nil,1)
+ local usedBindings={}
+ local nodes={};local function collect(n)nodes[n.id]=n;for _,c in n.children do collect(c)end end;collect(d.design)
+ for _,item in result do
+  local n=nodes[item.id]or nodes[item.id:match('^(.-)::')];if n then
+   item.attributes=item.attributes or {};local bindings=n.tokens or {};local targets={}
+   if item.id==n.id then item.attributes.P2R_TokenBindings=Http:JSONEncode(bindings)end
+   local function bind(property,key,kind,extra)if bindings[key]then usedBindings[n.id]=usedBindings[n.id]or {};usedBindings[n.id][key]=true; local b={property=property,token=bindings[key],kind=kind};for k,v in extra or {}do b[k]=v end;table.insert(targets,b)end end
+   local raster=n.assetKey and not nativeVisual(n,capabilities)
+   if item.id==n.id then
+    if not raster and not n.smooth and not n.visualSuppressed then
+     if n.type=='text'then if not n.text.runs then bind('TextColor3','fill','color');bind('TextSize','fontSize','fontSizes');bind('FontFamily','fontFamilies','fontFamilies');bind('FontWeight','fontWeight','fontWeights')elseif next(bindings)then warn(n,'RichText span styling is preserved; whole-label color/font token switching is skipped.')end
+     elseif not ((n.fills or {})[1]or {}).fillColorGradient then bind('BackgroundColor3','fill','color')end
+     bind('Rotation','rotation','rotation')
+    elseif next(bindings)then warn(n,'Baked visual tokens remain recorded; re-export for appearance changes except tintable image colors.')end
+    if not (n.layoutChild and (n.layoutChild.horizontalSizing=='fill'or n.layoutChild.verticalSizing=='fill'))then bind('SizeX','width','sizing');bind('SizeY','height','sizing')end
+   elseif item.id==n.id..'::surface' and n.tintColor then bind('ImageColor3','fill','color')
+   elseif item.class=='UICorner'then for _,key in {'borderRadiusTopLeft','borderRadiusTopRight','borderRadiusBottomRight','borderRadiusBottomLeft'}do local prop=key:gsub('borderRadius','')..'Radius';if item.props[prop]then bind(prop,key,'borderRadius')elseif item.props.CornerRadius and bindings[key]then warn(n,'Per-corner theme switching needs a native individual-corner descriptor.')end end
+   elseif item.class=='UIStroke'then bind('Color','strokeColor','color');bind('Thickness','strokeWidth','borderWidth')
+   elseif item.class=='UIPadding'then for _,side in {'Top','Bottom','Left','Right'}do bind('Padding'..side,'padding'..side,'spacing')end
+   elseif item.class=='UIListLayout'then bind('Padding',n.layout.dir=='row'and 'columnGap'or 'rowGap','spacing')end
+   item.attributes.P2R_ThemeTargets=Http:JSONEncode(targets)
+  end
+ end
+ for id,n in nodes do for key in n.tokens or {}do if not (usedBindings[id]or {})[key]then warn(n,'Token binding retained without a runtime mapping: '..key)end end end
+ if d.tokens and d.options and d.options.runtimeThemes then add(d.design.id..'::theme',nil,'ModuleScript',{Name='Penpot Theme',Source=Themes.source(d.tokens,d.source.fileId..'/'..d.source.rootId)});table.insert(warnings,'Generated Penpot Theme module: require it and call Apply(wrapper, themeId). No theme changes run automatically.')end
  if hasActions then
   add(d.design.id..'::controller',nil,'LocalScript',{Name='Penpot Bridge Controller',Source=Behaviors.source(),Disabled=false})
   table.insert(warnings,'Optional panel actions generate one LocalScript. Existing gameplay scripts remain untouched.')

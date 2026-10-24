@@ -141,6 +141,7 @@ return function(plugin,Importer,Assets)
    table.insert(lines,document.options.behaviors and 'Scrolling/panel tags enabled. Panel actions add a generated controller.' or 'Optional behavior tags are off.')
   end
   if previewPlan.nativeGroups then table.insert(lines,'Suitable opacity groups remain native and editable.') end
+  if document.tokens then table.insert(lines,string.format('%d token sets and %d themes retained.',#document.tokens.sets,#document.tokens.themes));if document.options and document.options.runtimeThemes then table.insert(lines,'An optional Penpot Theme ModuleScript will be generated. Your game must call Apply explicitly.')end end
   local q=previewPlan.quality
   table.insert(lines,string.format('\nIMPORT QUALITY\n%d native · %d image surfaces · %d smoothed surfaces\n%d covered by an ancestor image · %d substituted fonts\n%d native layouts',q.native,q.images,q.smoothed,q.covered,q.fonts,q.layouts))
   table.insert(lines,'')

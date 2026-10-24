@@ -2,12 +2,23 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-const sandbox={};vm.createContext(sandbox);vm.runInContext(await readFile(new URL('../penpot/corners.js',import.meta.url),'utf8'),sandbox);vm.runInContext(await readFile(new URL('../penpot/exporter.js',import.meta.url),'utf8'),sandbox);
+const sandbox={};vm.createContext(sandbox);for(const f of ['corners.js','tokens.js','exporter.js'])vm.runInContext(await readFile(new URL('../penpot/'+f,import.meta.url),'utf8'),sandbox);
 function shape(id,type='rectangle',extra={}){return {id,type,name:id,width:100,height:50,center:{x:50,y:25},opacity:null,fills:[],strokes:[],children:[],...extra}}
 const api=root=>({selection:[root],currentFile:{id:'file'},currentPage:{id:'page'}});
 
+test('mixed styles export native runs without splitting Unicode or losing markup characters',async()=>{
+ const {mixedText}=await import('./studio-advanced-fixture.mjs');const text=mixedText(),root=shape('root','board',{children:[text]});const d=sandbox.P2R.exportSelection(api(root)).document;
+ assert.equal(d.assets.length,0);assert.equal(d.design.children[0].text.runs.length,2);assert.equal(d.design.children[0].text.runs.map(r=>r.value).join(''),text.characters);assert.ok(d.design.children[0].text.runs[0].value.includes('😀'));
+ text.getRange=()=>({fontFamily:'Arial',fontSize:'20',fontWeight:'400',letterSpacing:'2',fills:[{fillColor:'#FFFFFF'}]});text.letterSpacing='2';assert.ok(sandbox.P2R.exportSelection(api(root)).document.assets.length>0);
+});
+test('token catalogs preserve bindings, aliases, theme sets and unresolved definitions',async()=>{
+ const {makeAdvanced,catalog}=await import('./studio-advanced-fixture.mjs');const d=makeAdvanced().document;
+ assert.equal(d.tokens.sets[1].tokens[1].value,'{brand}');assert.equal(d.tokens.palettes.Default.accent.value,'#85B5FF');assert.equal(d.tokens.palettes['dark-theme'].accent.value,'#FFAA44');assert.equal(d.design.children[1].tokens.fill,'surface');
+ const c=structuredClone(catalog);c.sets[0].tokens.push({id:'loop',name:'loop',type:'color',value:'{loop}'});const warnings=[];const out=sandbox.P2RTokens.exportCatalog(c,warnings);assert.equal(out.palettes.Default.loop,null);assert.match(warnings.join(' '),/unresolved/);
+});
+
 test('modern effects retain a compatibility image, complex effects stay rasterized',()=>{
- const effect=shape('effect','rectangle',{borderRadiusTopRight:20,shadows:[{style:'drop-shadow',color:{color:'#000000',opacity:.4},blur:8}]});
+ const effect=shape('effect','rectangle',{fills:[{fillColor:'#FFFFFF'}],borderRadiusTopRight:20,shadows:[{style:'drop-shadow',color:{color:'#000000',opacity:.4},blur:8}]});
  const root=shape('root','board',{children:[effect]});let d=sandbox.P2R.exportSelection(api(root)).document;
  assert.equal(d.design.children[0].nativeVisual,true);assert.equal(d.assets[0].fallback,true);
  effect.blur={value:5};d=sandbox.P2R.exportSelection(api(root)).document;assert.equal(d.design.children[0].nativeVisual,false);assert.equal(d.assets[0].fallback,false);
@@ -32,7 +43,7 @@ test('native layouts include justify, equal-gap wrapping and main-axis fill; uns
 });
 test('default opacity, persistent IDs, measured text and button semantics survive export',()=>{
  const root=shape('root','board',{children:[shape('text','text',{characters:'Hello',fontSize:'20',fontFamily:'Inter',fontWeight:'400',textBounds:{width:44,height:25}}),shape('cta','rectangle',{name:'Play [button]'})]});
- const {document:d}=sandbox.P2R.exportSelection(api(root));assert.equal(d.design.opacity,1);assert.equal(d.design.children[0].text.measuredWidth,44);assert.equal(d.design.children[1].button,true);assert.equal(d.source.rootId,'root');assert.equal(d.version,3);
+ const {document:d}=sandbox.P2R.exportSelection(api(root));assert.equal(d.design.opacity,1);assert.equal(d.design.children[0].text.measuredWidth,44);assert.equal(d.design.children[1].button,true);assert.equal(d.source.rootId,'root');assert.equal(d.version,4);
 });
 test('text modes separate known substitutions, unknown fonts and complex typography',()=>{
  const text=shape('title','text',{characters:'Hello',fontSize:'20',fontFamily:'Inter',fontWeight:'400',textBounds:{width:44,height:25}});

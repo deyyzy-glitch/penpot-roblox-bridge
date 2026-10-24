@@ -1,4 +1,18 @@
-# Penpot Bridge 2.3.0
+# Penpot Bridge 2.4.0
+
+- Mixed-style text exports as editable RichText runs with escaped markup, Unicode-safe boundaries, font mapping, sizes, weights, colors, transparency and decorations. Unsupported typography retains image fallback.
+- Local-file token sets, raw values, aliases, themes and shape bindings are retained. An optional Penpot Theme ModuleScript applies supported native properties only when your game calls it.
+- Monochrome icon masks reuse uploaded pixels across color variants and keep ImageColor3 editable.
+- Prepared-image controls add optional silhouette glows, experimental RGB edge dilation, explicit nine-slice insets, source-corner suggestions and three size previews.
+- Invalid slice settings block sending. Processed images and separate glow pixels travel in portable bundles.
+- Unfilled containers no longer receive a rectangular native shadow for a content silhouette; composited effects keep their image fallback.
+- Document version 4; legacy versions 1–3 still import. Existing third-party notices remain included. New text/token/pixel integration code was independently implemented.
+
+Validation: 22 Node tests, 38 Studio checks, a companion prepare/edit/send/bundle check, and a client Play-mode RichText/theme-switching check. Uploaded-image halo behavior is not guaranteed; RGB dilation is experimental and off by default.
+
+Update both helper and Studio plugin, restart Studio and reopen the companion. New uploads still use your own key entered locally. Mobile layout and OAuth sign-in remain outside this release.
+
+## 2.3.0
 
 - Capability-aware native unequal corners and solid-color shape shadows, retaining compatibility images without unnecessary uploads.
 - Broader native desktop flex layouts: alignment, space distribution, equal-gap wrapping and main-axis fill children.

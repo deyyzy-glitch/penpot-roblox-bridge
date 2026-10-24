@@ -46,7 +46,43 @@ Aliases `_scroll`, `_panel`, `_closed`, `_button`, `_open:Shop`, and `_close` ar
 
 Panel actions generate one readable LocalScript owned by the importer. It reads fixed attributes and does not execute text supplied by the design. User gameplay scripts and references remain separate. Removing panel actions disables and retains the generated controller. Scrolling does not generate a script. Composited image containers cannot become scrolling containers; simplify the container effects first.
 
-New exports require both the **2.3+ Studio plugin and helper** and use document version 3 so older plugins reject unsupported features. Legacy version-1 and version-2 bundles remain supported. Update the helper by extracting the latest Windows download into a new folder, close the old helper, and run the new launcher. Re-enter your own image key after restarting if needed.
+New exports require both the **2.4+ Studio plugin and helper** and use document version 4 so older plugins reject unsupported features. Legacy versions 1–3 remain supported. Extract the latest helper into a new folder, close the old helper, and run the new launcher. Re-enter your own image key locally after restarting if needed.
+
+### Editable mixed text (2.4)
+
+Supported mixed-style text ranges become one native RichText label. The exporter preserves range order and merges adjacent matching styles without splitting surrogate pairs. Markup characters are escaped. Supported range formatting includes mapped font families, sizes, weights, italics, solid colors/alpha, underline and strikethrough. Wrapping and font metrics still require review in Studio.
+
+Mixed paragraph alignment/line height, nonzero letter spacing, RTL, image/gradient text fills and unknown fonts can still need an image, depending on the text mode. RichText is not an exact replacement for every Penpot typography feature. Very long/fragmented text is bounded to 8192 range reads and 2048 runs; unsupported extraction falls back with a warning.
+
+### Design tokens and optional runtime themes (2.4)
+
+**Preserve design-token bindings** is enabled by default. Local-file token sets, theme definitions, raw values/aliases and shape-property references travel with the document. Native design values continue to synchronize through normal reimports.
+
+Enable **Generate a runtime theme module** to add a ModuleScript named **Penpot Theme** under the imported wrapper. It does not execute automatically. A LocalScript under that wrapper can use:
+
+```luau
+local wrapper = script.Parent
+local theme = require(wrapper:WaitForChild("Penpot Theme"))
+print(theme.List()) -- IDs and group/name labels
+local result = theme.Apply(wrapper, "Color/Dark") -- or a theme ID
+print(result.applied, result.skipped)
+```
+
+`theme.Data` retains the exported definitions, aliases and resolved palettes. A selected theme replaces its own theme group while keeping base sets and other active groups. Runtime application respects P2R_Locks and excludes retired objects and nested imports. It never executes token expressions as code.
+
+Initial runtime mappings cover solid native fill colors, tintable icon colors, plain-text font families/sizes/weights, dimensions, rotation, supported corner radii, solid stroke colors/widths, padding and list gaps. Simple aliases and literal numeric/px values resolve per exported theme. Complex expressions, composite typography/shadows, unsupported color formats and unmapped bindings remain recorded with warnings. They are not evaluated at runtime. Connected-library catalogs are not exported in this version. RichText span formatting and colors baked into artwork need re-exporting; a whole-label theme does not replace their runs.
+
+### Tintable icons, glows and image slicing (2.4)
+
+After preparing a design, eligible independent images get an image-settings card. Monochrome vector/icon images are automatically checked for white-mask reuse when **Reuse monochrome icons as tintable masks** is enabled. Multicolor images retain their source colors. Alpha is unchanged, and different colors of identical mask pixels share one upload. Studio applies the original tint through ImageColor3.
+
+Optional controls:
+
+- **Silhouette glow:** generate a separate blurred alpha image, with radius 1–32 design pixels, color and opacity controls. It follows the prepared image's alpha, including any source effects already baked into that image. Use a shadow-free source icon for a clean new glow. The glow is baked and must be re-exported after silhouette changes.
+- **RGB edge dilation:** experimental, off by default. Extends nearby RGB into transparent pixels without changing alpha. Roblox may rewrite transparent RGB during upload, so this does not guarantee fringe removal.
+- **Nine-slice scaling:** enter left/top/right/bottom insets in source-image pixels. Overlapping/out-of-bounds insets block sending. A source-corner suggestion is available only when uniform corners and image bounds support it. Review three size previews before sending; arbitrary illustrations may distort when sliced.
+
+Click **Apply image settings** after edits. Sending remains disabled while any image has unapplied settings. Compatibility fallback images, composited subtrees and generated smooth-corner tiles do not get these manual controls. The existing smooth-corner option supplies its own slice geometry. New glow assets and edited image pixels are embedded in portable bundles.
 
 ### Native effects, layouts and import quality (2.3)
 

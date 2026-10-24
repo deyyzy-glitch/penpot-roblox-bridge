@@ -36,9 +36,41 @@ globalThis.P2RCorners=(()=>{
  return {path,surface};
 })();
 
+/* Preserve source token definitions and bindings; resolve aliases without executing expressions. */
+globalThis.P2RTokens=(()=>{
+ const plain=v=>v==null?null:JSON.parse(JSON.stringify(v));
+ function exportCatalog(catalog,warnings=[]){
+  const sets=(catalog.sets||[]).map(s=>({id:s.id,name:s.name,active:!!s.active,tokens:(s.tokens||[]).map(t=>({id:t.id,name:t.name,type:t.type,value:plain(t.value),resolved:plain(t.resolvedValue??t.resolvedValueString)}))}));
+  if(sets.length>64||sets.reduce((n,s)=>n+s.tokens.length,0)>2000)throw Error('Token catalog exceeds 64 sets or 2000 tokens.');
+  const themes=(catalog.themes||[]).map(t=>({id:t.id,name:t.name,group:t.group||'',active:!!t.active,sets:(t.activeSets||[]).map(s=>s.id)}));
+  if(themes.length>32)throw Error('Token catalog exceeds 32 themes.');
+  const palette=active=>{
+   const raw=new Map();for(const s of sets)if(active.has(s.id))for(const t of s.tokens)raw.set(t.name,t);
+   const cache=Object.create(null),visiting=new Set();
+   const resolve=name=>{if(Object.hasOwn(cache,name))return cache[name];const t=raw.get(name);if(!t||visiting.has(name))return undefined;visiting.add(name);let value=t.value;
+    const alias=typeof value==='string'&&value.trim().match(/^\{([^{}]+)\}$/);if(alias)value=resolve(alias[1])?.value;
+    visiting.delete(name);const type=t.type;
+    if(typeof value==='string'&&/^(?:dimension|sizing|spacing|borderRadius|borderWidth|fontSizes|fontWeights|opacity|rotation|number)$/.test(type)){const m=value.trim().match(/^(-?(?:\d+\.?\d*|\.\d+))(?:px)?$/);value=m?Number(m[1]):undefined;}
+    if(type==='color'&&typeof value==='string'&&!/^#[\da-f]{6}$/i.test(value))value=undefined;
+    if(type==='fontFamilies'&&typeof value!=='string')value=undefined;
+    if(typeof value!=='number'&&typeof value!=='string')value=undefined;
+    if(typeof value==='number'&&(!Number.isFinite(value)||Math.abs(value)>100000))value=undefined;
+    return cache[name]=value===undefined?null:{type,value};
+   };
+   for(const name of raw.keys())resolve(name);return cache;
+  };
+  const active=new Set(sets.filter(s=>s.active).map(s=>s.id)),palettes=Object.create(null);palettes.Default=palette(active);
+  for(const theme of themes){const selected=new Set(active);const sameGroup=themes.filter(t=>t.group===theme.group);for(const t of sameGroup)for(const id of t.sets)selected.delete(id);for(const t of themes)if(t.active&&t.group!==theme.group)for(const id of t.sets)selected.add(id);for(const id of theme.sets)selected.add(id);palettes[theme.id]=palette(selected);}
+  const unresolved=Object.entries(palettes.Default).filter(([,v])=>!v).map(([k])=>k);if(unresolved.length)warnings.push('Theme export: unresolved aliases/expressions/types retained as definitions and skipped at runtime: '+unresolved.join(', '));
+  const bindingNames=Object.create(null);for(const set of sets)for(const token of set.tokens)if(typeof token.id==='string')bindingNames[token.id]=token.name;
+  return {sets,themes,palettes,bindingNames};
+ }
+ return {exportCatalog};
+})();
+
 /* Shared between the companion plugin and the connected Penpot test harness. */
 globalThis.P2R = (() => {
-  const version = 3;
+  const version = 4;
   // Text-mode policy and underscore tag grammar adapted from figrbx; see THIRD-PARTY-NOTICES.md.
   function parseName(raw, enabled) {
     if(!enabled)return {name:raw,button:/\[button\]/i.test(raw)};
@@ -64,9 +96,30 @@ globalThis.P2R = (() => {
     return {family:substitutions[key]||'Arial',known:!!substitutions[key],exact:false};
   }
   function shouldBakeText(mode,match){if(mode==='live')return false;if(mode==='exact')return !match.exact;return !match.known;}
+  function textRuns(shape){
+    if(typeof shape.getRange!=='function'||!shape.characters)return null;
+    const out=[];let reads=0;
+    const visit=(start,end)=>{
+      if(++reads>8192)throw Error('Text exceeds 8192 style-range reads. Split it into smaller text layers.');
+      const r=shape.getRange(start,end),keys=['fontFamily','fontSize','fontWeight','fontStyle','textDecoration','textTransform','direction','align','lineHeight','letterSpacing'];
+      const mixed=keys.some(k=>r[k]==='mixed')||r.fills==='mixed';
+      if(mixed&&end-start>1){let mid=Math.floor((start+end)/2);if(/[\uDC00-\uDFFF]/.test(shape.characters[mid]))mid++;if(mid<end){visit(start,mid);visit(mid,end);return;}}
+      if(mixed)throw Error('Unresolved mixed text range.');
+      const fills=r.fills||shape.fills,fill=Array.isArray(fills)&&fills.length===1?fills[0]:null;
+      if(!fill?.fillColor||fill.fillImage||fill.fillColorGradient||Number(r.letterSpacing||0)!==0||r.direction==='rtl')throw Error('Unsupported text-range paint, spacing or direction.');
+      const family=r.fontFamily||shape.fontFamily,match=fontMatch(family);
+      const run={value:shape.characters.slice(start,end),family,robloxFamily:match.family,fontSubstituted:!match.exact,size:Number(r.fontSize||shape.fontSize),weight:Math.max(100,Math.min(900,Math.round(Number(r.fontWeight||shape.fontWeight||400)/100)*100)),italic:(r.fontStyle||shape.fontStyle)==='italic',color:fill.fillColor,alpha:fill.fillOpacity??1,decoration:r.textDecoration||'none',transform:r.textTransform||'none',lineHeight:r.lineHeight||shape.lineHeight,align:r.align||shape.align};
+      if(!Number.isFinite(run.size)||run.size<1||run.size>1000||!Number.isFinite(run.weight)||!['none','underline','line-through'].includes(run.decoration)||!['none','uppercase','lowercase','capitalize'].includes(run.transform))throw Error('Unsupported range typography.');
+      const style=JSON.stringify({...run,value:''}),last=out[out.length-1];if(last?.style===style)last.run.value+=run.value;else out.push({style,run});
+    };
+    visit(0,shape.characters.length);if(out.length>2048)throw Error('Text exceeds 2048 runs.');
+    const runs=out.map(v=>v.run);if(new Set(runs.map(v=>v.align)).size>1||new Set(runs.map(v=>v.lineHeight)).size>1)throw Error('Mixed paragraph alignment or line height.');
+    return runs;
+  }
   function exportSelection(api, selection = [...api.selection], options = {}) {
     const textMode=options.textMode||'auto';if(!['auto','live','exact'].includes(textMode))throw Error('Invalid text mode.');
     const behaviors=options.behaviors===true,preferNativeGroups=options.nativeGroups!==false;
+    if(options.runtimeThemes&&options.tokens===false)throw Error('Enable token bindings to generate a theme module.');
     const smoothing=options.smoothing==null?0:Number(options.smoothing);if(!Number.isFinite(smoothing)||smoothing<0||smoothing>1)throw Error('Invalid corner smoothing.');
     if (selection.length !== 1) throw Error('Select exactly one board, component, or group.');
     const root = selection[0];
@@ -88,12 +141,11 @@ globalThis.P2R = (() => {
         fillColor:f.fillColor, fillOpacity:f.fillOpacity, fillColorGradient:f.fillColorGradient,
         imageId:f.fillImage?.id
       }))) : [];
-      if (s.fills === 'mixed') warn(s, 'Mixed text fills require a raster fallback for exact appearance.');
       const vector = ['path','boolean','svg-raw','image'].includes(s.type) || (s.type === 'ellipse' && Math.abs(s.width-s.height) > 0.1);
       const image = fills.some(f => f.imageId);
       const radii = [s.borderRadiusTopLeft,s.borderRadiusTopRight,s.borderRadiusBottomRight,s.borderRadiusBottomLeft].map(v=>num(v,num(s.borderRadius)));
       const shadows=copy((s.shadows||[]).filter(v=>!v.hidden));
-      const nativeShadows=shadows.length>0&&s.type!=='text'&&shadows.every(v=>v.color?.color&&!v.color.gradient&&!v.color.image&&['drop-shadow','inner-shadow'].includes(v.style||'drop-shadow'));
+      const nativeShadows=shadows.length>0&&s.type!=='text'&&fills.some(f=>(f.fillColor||f.fillColorGradient)&&num(f.fillOpacity,1)>0)&&shadows.every(v=>v.color?.color&&!v.color.gradient&&!v.color.image&&['drop-shadow','inner-shadow'].includes(v.style||'drop-shadow'));
       const reasons=[];
       if(fills.length>1)reasons.push('multiple fills');
       if(shadows.length)reasons.push('shadows');
@@ -103,20 +155,23 @@ globalThis.P2R = (() => {
       if(new Set(radii).size>1)reasons.push('individual corner radii');
       if((s.strokes||[]).length>1||(s.strokes||[]).some(v=>v.strokeColorGradient||(v.strokeStyle&&!['solid','none'].includes(v.strokeStyle))))reasons.push('complex strokes');
       for(const f of fills){const g=f.fillColorGradient;if(g&&(g.type!=='linear'||!((g.startX===0&&g.endX===1&&g.startY===.5&&g.endY===.5)||(g.startY===0&&g.endY===1&&g.startX===.5&&g.endX===.5))))reasons.push('gradient geometry')}
-      let match;
+      let match,runs;
       if(s.type==='text'){
+        try{runs=textRuns(s)}catch(e){warn(s,'RichText fallback: '+e.message)}
         match=fontMatch(s.fontFamily);
+        if(runs?.length)match=fontMatch(runs[0].family);
         const typography=[];
-        if(s.fills==='mixed'||[s.fontFamily,s.fontSize,s.fontWeight,s.align,s.fontStyle].includes('mixed'))typography.push('mixed text styling');
-        if(num(s.letterSpacing)||s.textDecoration&&s.textDecoration!=='none'||s.direction==='rtl')typography.push('text typography');
-        if(shouldBakeText(textMode,match))typography.push('font fidelity');
-        if(s.characters.includes('\n')||s.textBounds.height>num(s.fontSize,16)*1.8)typography.push('multiline typography');
+        if(!runs&&(s.fills==='mixed'||[s.fontFamily,s.fontSize,s.fontWeight,s.align,s.fontStyle].includes('mixed')))typography.push('mixed text styling');
+        if(num(s.letterSpacing)||(!runs&&s.textDecoration&&s.textDecoration!=='none')||s.direction==='rtl')typography.push('text typography');
+        if(runs?runs.some(r=>shouldBakeText(textMode,fontMatch(r.family))):shouldBakeText(textMode,match))typography.push('font fidelity');
+        if(!runs&&(s.characters.includes('\n')||s.textBounds.height>num(s.fontSize,16)*1.8))typography.push('multiline typography');
+        if(runs&&(s.characters.includes('\n')||runs.length>1))warn(s,'Editable RichText: review wrapping and font metrics in Studio.');
         if(textMode==='live'){if(typography.length||!match.exact)warn(s,'Editable text: typography/font may differ from Penpot.');}
         else reasons.push(...typography);
         if(!match.exact&&!shouldBakeText(textMode,match))warn(s,'Editable font substitution: '+s.fontFamily+' → '+match.family+'.');
       }
       const nativeGroup=preferNativeGroups&&!suppressed&&!!s.children?.length&&num(s.opacity,1)<1&&s.clipContent===true&&reasons.length===0&&!vector&&!image&&!parsed.button&&!parsed.scroll;
-      const subtree=!!s.children?.length&&((num(s.opacity,1)<1&&!nativeGroup)||(s.clipContent&&(reasons.length||new Set(radii).size>1))||(s.blendMode&&s.blendMode!=='normal'));
+      const subtree=!!s.children?.length&&((num(s.opacity,1)<1&&!nativeGroup)||(s.clipContent&&(reasons.length||new Set(radii).size>1))||(s.blendMode&&s.blendMode!=='normal')||(shadows.length>0&&!nativeShadows));
       if(subtree)reasons.push('composited subtree');
       const raster=!suppressed&&(vector||image||reasons.length>0);
       const nativeVisual=!suppressed&&raster&&!subtree&&!vector&&!image&&['board','group','rectangle'].includes(s.type)&&reasons.every(v=>v==='individual corner radii'||v==='shadows')&&(!shadows.length||(nativeShadows&&num(s.opacity,1)===1))&&!parsed.scroll;
@@ -149,11 +204,12 @@ globalThis.P2R = (() => {
         children:[]
       };
       if (s.type === 'text') {
-        n.text={value:s.characters,size:num(s.fontSize,16),family:s.fontFamily,robloxFamily:match.family,fontSubstituted:!match.exact,weight:num(s.fontWeight,400),
+        n.text={value:s.characters,size:runs?.[0]?.size||num(s.fontSize,16),family:runs?.[0]?.family||s.fontFamily,robloxFamily:match.family,fontSubstituted:runs?runs.some(r=>r.fontSubstituted):!match.exact,weight:runs?.[0]?.weight||num(s.fontWeight,400),
           italic:s.fontStyle === 'italic',align:s.align,verticalAlign:s.verticalAlign,
           lineHeight:num(s.lineHeight,1.2),letterSpacing:num(s.letterSpacing),transform:s.textTransform,
-          measuredWidth:s.textBounds.width,measuredHeight:s.textBounds.height};
+          measuredWidth:s.textBounds.width,measuredHeight:s.textBounds.height,...(runs&&(runs.length>1||runs[0].decoration!=='none')?{runs}:{} )};
       }
+      if(options.tokens!==false&&s.tokens){n.tokens={};for(const [key,value]of Object.entries(s.tokens))if(typeof value==='string'&&value)n.tokens[key]=value;}
       if (s.flex) {
         const f=s.flex;
         n.layout={dir:f.dir,wrap:f.wrap,gap:f.dir.startsWith('row')?f.columnGap:f.rowGap,
@@ -177,7 +233,9 @@ globalThis.P2R = (() => {
       return n;
     }
     const document={format:'penpot-roblox',version,source:{fileId:api.currentFile.id,pageId:api.currentPage.id,rootId:root.id},
-      design:visit(root,null,0),warnings,assets,assetMap:{},fontMap:{},options:{textMode,behaviors,nativeGroups:preferNativeGroups,smoothing},capabilities:['text-modes','native-groups','behavior-tags','native-effects','flex-layouts','quality-report','smooth-corners']};
+      design:visit(root,null,0),warnings,assets,assetMap:{},fontMap:{},options:{textMode,behaviors,nativeGroups:preferNativeGroups,smoothing,runtimeThemes:options.runtimeThemes===true,autoTint:options.autoTint!==false},capabilities:['text-modes','native-groups','behavior-tags','native-effects','flex-layouts','quality-report','smooth-corners','rich-text','tokens','image-controls']};
+    if(options.tokens!==false&&api.library?.local?.tokens)document.tokens=P2RTokens.exportCatalog(api.library.local.tokens,warnings);
+    if(options.runtimeThemes&&!document.tokens)warnings.push('No token catalog is exposed by this Penpot file; no runtime theme module will be generated.');
     if(behaviors){
       const panels=new Set();const collect=n=>{if(n.behavior.panel){if(panels.has(n.behavior.panel))throw Error('Duplicate panel name: '+n.behavior.panel);panels.add(n.behavior.panel);}n.children.forEach(collect)};collect(document.design);
       const resolve=(n,nearest)=>{const b=n.behavior;nearest=b.panel||nearest;if(n.initiallyClosed&&!b.panel)throw Error(n.name+': [closed] needs a [panel] tag.');if(b.action){if(!b.target)b.target=nearest||'';if(!panels.has(b.target))throw Error(n.name+': action has no matching panel: '+b.target);}n.children.forEach(c=>resolve(c,nearest))};resolve(document.design,'');
@@ -198,7 +256,7 @@ globalThis.P2R = (() => {
     }
     return result;
   }
-  return {exportSelection,exportAssets,parseName,fontMatch,shouldBakeText};
+  return {exportSelection,exportAssets,parseName,fontMatch,shouldBakeText,textRuns};
 })();
 
 penpot.ui.open('Penpot Bridge', 'http://127.0.0.1:43129/ui.html', {width:440,height:610});
