@@ -8,4 +8,8 @@ Run Node tests with `node --test --test-isolation=none tests/bridge.test.mjs tes
 
 When running through a Studio connector that owns an undo recording, schedule the test function with task.delay(1, ...), then read its result in a later command. Run tests in a separate unpublished place.
 
+`quality-fixture.mjs` creates a version-3 document. Pass Importer, that document and Assets to `studio-quality.luau`. Its 11 checks cover native effects, capability fallback, unused-upload filtering, report accuracy, wrapping order, space distribution, fill resizing, smooth image descriptors, mode switching, user references and invalid metadata. The test removes its sandbox.
+
+Browser verification should render circular/smoothed/unequal/inner-stroked corner images, decode their PNG pixels through the helper, then prepare and send a fixture through the actual companion UI. Confirm the portable bundle contains smooth pixel payloads and slice metadata. This requires no Roblox asset upload.
+
 For runtime verification, import the feature fixture into StarterGui, start Play, click the Open and Close buttons, and scroll Inventory. Expected: panel starts hidden, opens and closes on activation, and the scroll canvas extends beyond its viewport. The runtime controller uses only imported source-owned metadata.

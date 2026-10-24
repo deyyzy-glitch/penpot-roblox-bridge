@@ -3,6 +3,25 @@ local Http = game:GetService('HttpService')
 local Behaviors=require(script.Parent.Behaviors)
 local Importer = {}
 local measurementCache={}
+local function nativeVisual(n,capabilities)
+ if not n.nativeVisual then return false end
+ if n.radii and (n.radii[1]~=n.radii[2] or n.radii[1]~=n.radii[3] or n.radii[1]~=n.radii[4]) and not capabilities.corners then return false end
+ if #(n.shadows or {})>0 and not capabilities.shadows then return false end
+ return true
+end
+function Importer.capabilities()
+ local c=Instance.new('UICorner');local corners=pcall(function()c.TopLeftRadius=UDim.new(0,1)end);c:Destroy()
+ local shadows,s=pcall(Instance.new,'UIShadow');if shadows then s:Destroy()end
+ return {corners=corners,shadows=shadows}
+end
+function Importer.assetNeeded(d,asset)
+ return Importer.assetFilter(d)(asset)
+end
+function Importer.assetFilter(d)
+ local nodes={};local function walk(n)nodes[n.id]=n;for _,c in ipairs(n.children)do walk(c)end end;walk(d.design)
+ local capabilities=Importer.capabilities()
+ return function(asset)return not asset.fallback or not nodes[asset.shapeId] or not nativeVisual(nodes[asset.shapeId],capabilities)end
+end
 local function color(s)
  assert(type(s)=='string' and s:match('^#%x%x%x%x%x%x$'), 'Expected #RRGGBB color')
  return Color3.fromHex(s)
@@ -27,7 +46,7 @@ local function locked(i,p)
  return false
 end
 function Importer.validate(d)
- assert(type(d)=='table' and d.format=='penpot-roblox' and (d.version==1 or d.version==2),'Unsupported document format/version. Update the Studio plugin for newer exports.')
+ assert(type(d)=='table' and d.format=='penpot-roblox' and (d.version==1 or d.version==2 or d.version==3),'Unsupported document format/version. Update the Studio plugin for newer exports.')
  assert(type(d.source)=='table','Missing source')
  for _,k in {'fileId','pageId','rootId'} do assert(type(d.source[k])=='string' and #d.source[k]>0 and #d.source[k]<200,'Invalid source '..k) end
  assert(type(d.design)=='table' and d.design.id==d.source.rootId,'Root identity mismatch')
@@ -46,6 +65,14 @@ function Importer.validate(d)
   for _,k in {'x','y','rotation'} do number(n[k],-1000000,1000000,k) end
   for _,k in {'width','height'} do number(n[k],0,100000,k) end
   number(n.opacity or 1,0,1,'opacity'); number(n.radius or 0,0,100000,'radius')
+  if n.radii then assert(type(n.radii)=='table' and #n.radii==4,'Invalid corner radii');for _,v in n.radii do number(v,0,100000,'corner radius')end end
+  assert(n.nativeVisual==nil or type(n.nativeVisual)=='boolean','Invalid native visual')
+  if n.nativeVisual then assert(n.assetKey and not n.rasterSubtree and not n.visualSuppressed and n.type~='text' and (n.type=='rectangle' or n.type=='board' or n.type=='group'),'Invalid native effect fallback')end
+  if n.shadows then assert(type(n.shadows)=='table' and #n.shadows<=16,'Too many shadows');for _,s in n.shadows do
+   assert(s.style==nil or s.style=='drop-shadow' or s.style=='inner-shadow','Invalid shadow style');assert(type(s.color)=='table','Missing shadow color');color(s.color.color);number(s.color.opacity or 1,0,1,'shadow opacity')
+   number(s.offsetX or 0,-100000,100000,'shadow x');number(s.offsetY or 0,-100000,100000,'shadow y');number(s.blur or 0,0,100000,'shadow blur');number(s.spread or 0,-100000,100000,'shadow spread')
+  end end
+  if n.smooth then assert(type(n.smooth)=='table' and type(n.smooth.key)=='string' and not n.assetKey and type(n.smooth.slice)=='table' and #n.smooth.slice==4,'Invalid smooth surface');for _,v in n.smooth.slice do number(v,0,1024,'slice')end;assert(n.smooth.slice[3]>n.smooth.slice[1] and n.smooth.slice[4]>n.smooth.slice[2],'Empty slice center')end
   assert(type(n.children)=='table' and type(n.fills or {})=='table' and type(n.strokes or {})=='table','Invalid children/style arrays')
   if n.assetKey then assert(type(n.assetKey)=='string','Invalid asset key') end
   for _,field in {'nativeGroup','scroll','initiallyClosed'} do assert(n[field]==nil or type(n[field])=='boolean','Invalid '..field) end
@@ -83,7 +110,11 @@ function Importer.validate(d)
    number(n.layout.gap or 0,0,100000,'layout gap')
    assert(type(n.layout.padding)=='table' and #n.layout.padding==4,'Invalid padding')
    for _,v in ipairs(n.layout.padding) do number(v,0,100000,'padding') end
+   assert(n.layout.wrap==nil or n.layout.wrap=='wrap' or n.layout.wrap=='nowrap','Invalid wrapping')
+   assert(n.layout.justify==nil or table.find({'start','center','end','space-between','space-around','space-evenly'},n.layout.justify),'Invalid justify')
+   assert(n.layout.align==nil or table.find({'start','center','end'},n.layout.align),'Invalid alignment')
   end
+  if n.layoutChild then for _,key in {'horizontalSizing','verticalSizing'} do assert(n.layoutChild[key]==nil or table.find({'fix','auto','fill'},n.layoutChild[key]),'Invalid child sizing')end end
   for _,c in ipairs(n.children) do walk(c,depth+1) end
  end
  walk(d.design,0)
@@ -99,6 +130,8 @@ local function axis(pos,size,parentSize,constraint)
 end
 local function descriptors(d,options)
  local result,warnings={},table.clone(d.warnings or {})
+ local capabilities=options.capabilities or Importer.capabilities()
+ local quality={native=0,images=0,covered=0,smoothed=0,fonts=0,layouts=0,items={}}
  local function warn(n,s) table.insert(warnings,n.name..': '..s) end
  local function add(id,parent,class,props,attributes)
   local item={id=id,parent=parent,class=class,props=props,attributes=attributes}
@@ -120,7 +153,8 @@ local function descriptors(d,options)
   local scroll=n.scroll==true and d.options and d.options.behaviors==true
   local opacity=nativeGroup and 1 or inheritedOpacity*(n.opacity or 1)
   local text=n.type=='text'
-  local raster=n.assetKey~=nil
+  local modern=nativeVisual(n,capabilities)
+  local raster=n.assetKey~=nil and not modern
   local image=raster and not n.rasterSurface
   local class=scroll and 'ScrollingFrame' or nativeGroup and 'CanvasGroup' or text and (n.button and 'TextButton' or 'TextLabel') or (image and (n.button and 'ImageButton' or 'ImageLabel') or (n.button and 'TextButton' or 'Frame'))
   local f=(n.fills or {})[1]
@@ -131,19 +165,23 @@ local function descriptors(d,options)
    ssx,sx,ssy,sy=options.responsive and 1 or 0,options.responsive and 0 or n.width,options.responsive and 1 or 0,options.responsive and 0 or n.height
   end
   local layoutOrder=z
-  if parentNode and parentNode.layout and parentNode.layout.native then
+  if parentNode and parentNode.layout and parentNode.layout.native and (not parentNode.assetKey or nativeVisual(parentNode,capabilities))then
    local axisName=parentNode.layout.dir=='row' and 'x' or 'y'
    layoutOrder=0
    for _,sibling in ipairs(parentNode.children) do
-    if sibling[axisName]<n[axisName] or (sibling[axisName]==n[axisName] and sibling.id<n.id) then layoutOrder+=1 end
+    local cross=axisName=='x' and 'y' or 'x'
+    local wrap=parentNode.layout.wrap=='wrap'
+    if (wrap and sibling[cross]<n[cross]-.1) or ((not wrap or math.abs(sibling[cross]-n[cross])<.1) and (sibling[axisName]<n[axisName] or (sibling[axisName]==n[axisName] and sibling.id<n.id)))then layoutOrder+=1 end
    end
   end
   local p={Name=n.name,Position=UDim2.new(psx,px,psy,py),Size=UDim2.new(ssx,sx,ssy,sy),AnchorPoint=Vector2.zero,
    Rotation=n.rotation,Visible=n.visible~=false,BorderSizePixel=0,ZIndex=z,LayoutOrder=layoutOrder,
    BackgroundColor3=f and f.fillColor and color(f.fillColor) or Color3.new(1,1,1),
-   BackgroundTransparency=(text or raster or n.visualSuppressed or not f) and 1 or 1-opacity*(f.fillOpacity or 1),
+   BackgroundTransparency=(text or raster or n.smooth or n.visualSuppressed or not f) and 1 or 1-opacity*(f.fillOpacity or 1),
    ClipsDescendants=n.clip==true and not raster,AutomaticSize=Enum.AutomaticSize.None}
   if n.clip and n.rotation~=0 then warn(n,'Roblox clipping with rotated objects may differ.') end
+  if modern then warn(n,'Native corners/shadows selected; fallback image is unused. Shadow softness may differ from Penpot.')end
+  if n.nativeVisual and not modern then warn(n,'This Studio lacks the required native effects; using the compatibility image.')end
   if n.opacity and n.opacity<1 and #n.children>0 and not nativeGroup and not raster then warn(n,'Container opacity is multiplied into descendants; overlapping children may composite differently.') end
   if nativeGroup then p.GroupTransparency=1-inheritedOpacity*(n.opacity or 1);p.GroupColor3=Color3.new(1,1,1) end
   if scroll then p.ClipsDescendants=true;p.ScrollingDirection=Enum.ScrollingDirection.Y;p.AutomaticCanvasSize=Enum.AutomaticSize.Y;p.CanvasSize=UDim2.new();p.ScrollBarThickness=6 end
@@ -205,8 +243,19 @@ local function descriptors(d,options)
    add(n.id..'::surface',n.id,'ImageLabel',{Name='Penpot Visual Surface',BackgroundTransparency=1,BorderSizePixel=0,Position=UDim2.fromOffset(b.x,b.y),Size=UDim2.fromOffset(b.width,b.height),Image=asset or '',ImageColor3=Color3.new(1,1,1),ImageTransparency=1-inheritedOpacity,ScaleType=Enum.ScaleType.Stretch,ZIndex=z,Visible=not n.visualSuppressed})
    if not asset then warn(n,'Missing Roblox image asset: '..n.assetKey..'. Upload pending images before importing.') end
   end
-  if not raster and not n.visualSuppressed then
-   if (n.radius or 0)>0 or n.type=='ellipse' then add(n.id..'::corner',n.id,'UICorner',{Name='Penpot Corner',CornerRadius=n.type=='ellipse' and UDim.new(.5,0) or UDim.new(0,n.radius)}) end
+  if n.smooth and not n.visualSuppressed then
+   local asset=(d.assetMap or {})[n.smooth.key];local s=n.smooth.slice
+   add(n.id..'::smooth',n.id,'ImageLabel',{Name='Penpot Smooth Surface',BackgroundTransparency=1,BorderSizePixel=0,Position=UDim2.new(),Size=UDim2.fromScale(1,1),Image=asset or '',ImageTransparency=1-opacity,ImageColor3=Color3.new(1,1,1),ScaleType=Enum.ScaleType.Slice,SliceCenter=Rect.new(s[1],s[2],s[3],s[4]),SliceScale=.5,ZIndex=z,Visible=true})
+   if not asset then warn(n,'Missing smooth corner image: '..n.smooth.key)end
+  end
+  if not raster and not n.smooth and not n.visualSuppressed then
+   if (n.radius or 0)>0 or n.type=='ellipse' or (modern and n.radii) then
+    local cp={Name='Penpot Corner'}
+    if modern and capabilities.corners and n.radii then for index,key in {'TopLeftRadius','TopRightRadius','BottomRightRadius','BottomLeftRadius'}do cp[key]=UDim.new(0,n.radii[index])end
+    else cp.CornerRadius=n.type=='ellipse' and UDim.new(.5,0) or UDim.new(0,n.radius)end
+    add(n.id..'::corner',n.id,'UICorner',cp)
+   end
+   if modern then for ix,s in n.shadows or {}do add(n.id..'::shadow'..ix,n.id,'UIShadow',{Name='Penpot Shadow',Color=color(s.color.color),Transparency=1-opacity*(s.color.opacity or 1),BlurRadius=UDim.new(0,s.blur or 0),Offset=UDim2.fromOffset(s.offsetX or 0,s.offsetY or 0),Spread=UDim2.fromOffset(2*(s.spread or 0),2*(s.spread or 0)),Inset=s.style=='inner-shadow',Mode=Enum.ApplyShadowMode.Shape,ShowBehindParent=false,ZIndex=-ix,Enabled=true})end end
    for index,s in ipairs(n.strokes or {}) do
     if index>1 then warn(n,'Additional strokes omitted.');break end
     if s.strokeStyle~='none' then
@@ -234,13 +283,25 @@ local function descriptors(d,options)
     end
    end
   end
-  if n.layout and n.layout.native then
+  if parentNode and parentNode.layout and parentNode.layout.native and (not parentNode.assetKey or nativeVisual(parentNode,capabilities))then
+   local main=parentNode.layout.dir=='row' and 'horizontalSizing' or 'verticalSizing'
+   if n.layoutChild and n.layoutChild[main]=='fill' then add(n.id..'::flex',n.id,'UIFlexItem',{Name='Penpot Flex',FlexMode=Enum.UIFlexMode.Fill});if main=='horizontalSizing' then p.Size=UDim2.new(0,0,p.Size.Y.Scale,p.Size.Y.Offset)else p.Size=UDim2.new(p.Size.X.Scale,p.Size.X.Offset,0,0)end end
+  end
+  if n.layout and n.layout.native and not raster then
    local l=n.layout;local pad=l.padding;local horizontal=l.dir=='row'
    local h=horizontal and Enum.HorizontalAlignment.Left or (({start=Enum.HorizontalAlignment.Left,center=Enum.HorizontalAlignment.Center,['end']=Enum.HorizontalAlignment.Right})[l.align] or Enum.HorizontalAlignment.Left)
    local v=horizontal and (({start=Enum.VerticalAlignment.Top,center=Enum.VerticalAlignment.Center,['end']=Enum.VerticalAlignment.Bottom})[l.align] or Enum.VerticalAlignment.Top) or Enum.VerticalAlignment.Top
    add(n.id..'::padding',n.id,'UIPadding',{Name='Penpot Padding',PaddingTop=UDim.new(0,pad[1]),PaddingRight=UDim.new(0,pad[2]),PaddingBottom=UDim.new(0,pad[3]),PaddingLeft=UDim.new(0,pad[4])})
-   add(n.id..'::layout',n.id,'UIListLayout',{Name='Penpot Layout',FillDirection=horizontal and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical,Padding=UDim.new(0,l.gap or 0),SortOrder=Enum.SortOrder.LayoutOrder,HorizontalAlignment=h,VerticalAlignment=v})
+   local justify=l.justify or 'start';local alignMap=horizontal and {start=Enum.HorizontalAlignment.Left,center=Enum.HorizontalAlignment.Center,['end']=Enum.HorizontalAlignment.Right}or{start=Enum.VerticalAlignment.Top,center=Enum.VerticalAlignment.Center,['end']=Enum.VerticalAlignment.Bottom}
+   if alignMap[justify]then if horizontal then h=alignMap[justify]else v=alignMap[justify]end end
+   local flex=({['space-between']=Enum.UIFlexAlignment.SpaceBetween,['space-around']=Enum.UIFlexAlignment.SpaceAround,['space-evenly']=Enum.UIFlexAlignment.SpaceEvenly})[justify] or Enum.UIFlexAlignment.None
+   add(n.id..'::layout',n.id,'UIListLayout',{Name='Penpot Layout',FillDirection=horizontal and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical,Padding=UDim.new(0,l.gap or 0),SortOrder=Enum.SortOrder.LayoutOrder,HorizontalAlignment=h,VerticalAlignment=v,Wraps=l.wrap=='wrap',HorizontalFlex=horizontal and flex or Enum.UIFlexAlignment.None,VerticalFlex=horizontal and Enum.UIFlexAlignment.None or flex})
   end
+  local mode=n.visualSuppressed and 'covered' or raster and 'images' or n.smooth and 'smoothed' or 'native';quality[mode]+=1
+  local substituted=text and not raster and not n.visualSuppressed and n.text.fontSubstituted==true and not (d.fontMap or {})[n.text.family]
+  if substituted then quality.fonts+=1 end
+  if n.layout and n.layout.native and not raster then quality.layouts+=1 end
+  table.insert(quality.items,{name=n.name,id=n.id,mode=mode,detail=(substituted and ('Font: '..n.text.family..' → '..n.text.robloxFamily)or modern and 'Native effects; compatibility image unused' or n.smooth and 'Smoothed 9-slice image; native children' or raster and 'Image appearance; source geometry retained' or n.visualSuppressed and 'Appearance included in ancestor image' or 'Editable native appearance')..(n.layout and (n.layout.native and not raster and '; native layout' or '; measured positions')or '')})
   for _,c in ipairs(n.children) do walk(c,n.id,n,opacity) end
  end
  walk(d.design,nil,nil,1)
@@ -248,7 +309,7 @@ local function descriptors(d,options)
   add(d.design.id..'::controller',nil,'LocalScript',{Name='Penpot Bridge Controller',Source=Behaviors.source(),Disabled=false})
   table.insert(warnings,'Optional panel actions generate one LocalScript. Existing gameplay scripts remain untouched.')
  end
- return result,warnings
+ return result,warnings,quality
 end
 function Importer.prepare(d,target,options)
  options=options or {}
@@ -259,7 +320,7 @@ function Importer.prepare(d,target,options)
  for _,i in target:GetChildren() do
   if i:GetAttribute('P2R_Design')==key then assert(not wrapper,'Duplicate imported design containers; resolve manually');wrapper=i end
  end
- local items,warnings=descriptors(d,options)
+  local items,warnings,quality=descriptors(d,options)
  local nativeGroups=false
  for _,item in items do if item.class=='CanvasGroup' then nativeGroups=true end end
  if nativeGroups and target~=game:GetService('StarterGui') then
@@ -301,7 +362,7 @@ function Importer.prepare(d,target,options)
  for id,old in pairs(index) do
   if not wanted[id] and not old:GetAttribute('P2R_Stale') then stats.removed+=1;table.insert(changes,{id=id,name=old.Name,action='retain stale'}) end
  end
- return {document=d,target=target,options=options,key=key,wrapper=wrapper,index=index,items=items,wanted=wanted,stats=stats,warnings=warnings,changes=changes,nativeGroups=nativeGroups}
+ return {document=d,target=target,options=options,key=key,wrapper=wrapper,index=index,items=items,wanted=wanted,stats=stats,warnings=warnings,changes=changes,nativeGroups=nativeGroups,quality=quality}
 end
 function Importer.apply(plan,onProgress)
  assert(plan.stats.classChanges==0 or plan.options.allowClassChanges,'Class changes require confirmation; old objects will be retained')
@@ -337,8 +398,8 @@ function Importer.apply(plan,onProgress)
    end
    if i:GetAttribute('P2R_HiddenByImporter') then
     if i:IsA('GuiObject') then i.Visible=i:GetAttribute('P2R_PreStaleVisible')~=false end
-    if i:IsA('UIGradient') or i:IsA('UIStroke') then i.Enabled=true end
-    i:SetAttribute('P2R_HiddenByImporter',nil);i:SetAttribute('P2R_PreStaleVisible',nil)
+    if i:IsA('UIGradient') or i:IsA('UIStroke') or i:IsA('UIShadow') then i.Enabled=i:GetAttribute('P2R_PreStaleEnabled')~=false end
+    i:SetAttribute('P2R_HiddenByImporter',nil);i:SetAttribute('P2R_PreStaleVisible',nil);i:SetAttribute('P2R_PreStaleEnabled',nil)
    end
    for prop,value in pairs(item.props) do
     if fresh or (not locked(i,prop) and (plan.options.force or not last[prop] or signature(i[prop])==last[prop])) then
@@ -358,11 +419,13 @@ function Importer.apply(plan,onProgress)
     if i:IsA('LocalScript') and not i:GetAttribute('P2R_DisabledByImporter') then
      i:SetAttribute('P2R_PreStaleDisabled',i.Disabled);i:SetAttribute('P2R_DisabledByImporter',true);i.Disabled=true
     end
-    if plan.options.hideRemoved then
+    -- Replaced source-owned decorations must stop rendering even when removed layers are retained visibly.
+    local baseId=id:match('^(.-)::')
+    if plan.options.hideRemoved or (baseId and plan.wanted[baseId])then
      if i:IsA('GuiObject') and not i:GetAttribute('P2R_HiddenByImporter') then
       i:SetAttribute('P2R_PreStaleVisible',i.Visible);i:SetAttribute('P2R_HiddenByImporter',true);i.Visible=false
-     elseif i:IsA('UIGradient') or i:IsA('UIStroke') then i:SetAttribute('P2R_HiddenByImporter',true);i.Enabled=false
-     elseif i:IsA('UIListLayout') or i:IsA('UIPadding') or i:IsA('UICorner') then
+     elseif i:IsA('UIGradient') or i:IsA('UIStroke') or i:IsA('UIShadow') then if not i:GetAttribute('P2R_HiddenByImporter')then i:SetAttribute('P2R_PreStaleEnabled',i.Enabled)end;i:SetAttribute('P2R_HiddenByImporter',true);i.Enabled=false
+     elseif i:IsA('UIListLayout') or i:IsA('UIPadding') or i:IsA('UICorner') or i:IsA('UIFlexItem')then
       -- Components have no Enabled flag: retain them outside the rendered hierarchy.
       local retained=wrapper:FindFirstChild('P2R Retained Components')
       if not retained then retained=Instance.new('Folder');retained.Name='P2R Retained Components';retained.Parent=wrapper end

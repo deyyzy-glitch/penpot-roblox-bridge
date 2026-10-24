@@ -1,4 +1,17 @@
-# Penpot Bridge 2.2.0
+# Penpot Bridge 2.3.0
+
+- Capability-aware native unequal corners and solid-color shape shadows, retaining compatibility images without unnecessary uploads.
+- Broader native desktop flex layouts: alignment, space distribution, equal-gap wrapping and main-axis fill children.
+- Import quality totals and per-layer explanations in Studio Review, including image use, covered descendants, typography substitutions and layout handling.
+- Optional 60%/100% corner smoothing for eligible solid surfaces, baked into reusable 9-slice images. No game runtime library required.
+- Switching rendering modes retires obsolete generated decorations while preserving instances, references and user scripts.
+- Document version 3; legacy versions 1 and 2 still import. MIT notices for Supercorner/figma-squircle retained.
+
+Validation: 16 Node tests and 30 Studio checks passed in a separate unpublished test place. Four browser-rendered corner samples passed PNG/alpha/bounds checks. The actual companion UI prepared a smoothed fixture, sent it through the bridge and produced a portable bundle with embedded pixels.
+
+Update both the Studio plugin and helper, then restart Studio and reopen the Penpot companion. Extract the new helper to a new folder, close the previous helper, and run Start-Penpot-Bridge.cmd. Re-enter your own upload key locally if needed. Smoothing is off by default and intentionally changes eligible corners; native shadow softness can differ from Penpot. Automatic mobile layout and OAuth sign-in remain outside this release.
+
+## 2.2.0
 
 - Auto, Editable and Exact text modes in the Penpot companion, with reported substitutions and persistent preferences.
 - Native CanvasGroup opacity for suitable clipped containers; image fallback remains for other effects.

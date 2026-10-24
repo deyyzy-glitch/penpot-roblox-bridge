@@ -9,5 +9,5 @@ const importer=await read('studio/Importer.luau'),ui=await read('studio/UI.luau'
 await writeFile(path.join(root,'PenpotRoblox.rbxmx'),`<roblox version="4">${source('PenpotRoblox','Script',await read('studio/Main.server.luau'),source('Importer','ModuleScript',importer)+source('UI','ModuleScript',ui)+source('Assets','ModuleScript',assets)+source('Behaviors','ModuleScript',behaviors))}</roblox>`);
 const inlineImporter=importer.replace('local Behaviors=require(script.Parent.Behaviors)','');
 await writeFile(path.join(root,'PenpotRoblox.plugin.lua'),`-- Generated standalone local plugin. Edit studio/ sources, then run node build.mjs.\nlocal Behaviors=(function()\n${behaviors}\nend)()\nlocal Importer=(function()\n${inlineImporter}\nend)()\nlocal Assets=(function()\n${assets}\nend)()\nlocal createUI=(function()\n${ui}\nend)()\nassert(plugin,'Install as a Studio plugin')\ncreateUI(plugin,Importer,Assets)\n`);
-await writeFile(path.join(root,'penpot/plugin.js'),await read('penpot/exporter.js')+'\n'+await read('penpot/plugin-tail.js'));
+await writeFile(path.join(root,'penpot/plugin.js'),await read('penpot/corners.js')+'\n'+await read('penpot/exporter.js')+'\n'+await read('penpot/plugin-tail.js'));
 console.log('Built PenpotRoblox.rbxmx, standalone plugin, and Penpot companion.');

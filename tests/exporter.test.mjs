@@ -2,12 +2,37 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-const sandbox={};vm.createContext(sandbox);vm.runInContext(await readFile(new URL('../penpot/exporter.js',import.meta.url),'utf8'),sandbox);
+const sandbox={};vm.createContext(sandbox);vm.runInContext(await readFile(new URL('../penpot/corners.js',import.meta.url),'utf8'),sandbox);vm.runInContext(await readFile(new URL('../penpot/exporter.js',import.meta.url),'utf8'),sandbox);
 function shape(id,type='rectangle',extra={}){return {id,type,name:id,width:100,height:50,center:{x:50,y:25},opacity:null,fills:[],strokes:[],children:[],...extra}}
 const api=root=>({selection:[root],currentFile:{id:'file'},currentPage:{id:'page'}});
+
+test('modern effects retain a compatibility image, complex effects stay rasterized',()=>{
+ const effect=shape('effect','rectangle',{borderRadiusTopRight:20,shadows:[{style:'drop-shadow',color:{color:'#000000',opacity:.4},blur:8}]});
+ const root=shape('root','board',{children:[effect]});let d=sandbox.P2R.exportSelection(api(root)).document;
+ assert.equal(d.design.children[0].nativeVisual,true);assert.equal(d.assets[0].fallback,true);
+ effect.blur={value:5};d=sandbox.P2R.exportSelection(api(root)).document;assert.equal(d.design.children[0].nativeVisual,false);assert.equal(d.assets[0].fallback,false);
+});
+
+test('optional smoothing creates compact slice surfaces and leaves clipped containers intact',()=>{
+ const item=shape('item','rectangle',{borderRadius:24,fills:[{fillColor:'#85B5FF'}]});const root=shape('root','board',{children:[item]});
+ assert.equal(sandbox.P2R.exportSelection(api(root)).document.design.children[0].smooth,undefined);
+ let d=sandbox.P2R.exportSelection(api(root),[root],{smoothing:.6}).document;assert.equal(d.assets[0].kind,'smooth');assert.ok(d.design.children[0].smooth.slice[2]>d.design.children[0].smooth.slice[0]);
+ item.clipContent=true;item.children=[shape('child')];d=sandbox.P2R.exportSelection(api(root),[root],{smoothing:.6}).document;assert.equal(d.design.children[0].smooth,undefined);assert.match(d.warnings.join(' '),/Smooth corners skipped/);
+ assert.throws(()=>sandbox.P2R.exportSelection(api(root),[root],{smoothing:2}),/smoothing/);
+ for(const radii of [[0,0,0,0],[0,120,3,25],[24,24,24,24]])for(const smoothing of [0,.6,1]){const g=sandbox.P2RCorners.surface({radii,smoothing,fill:{color:'#FFFFFF',opacity:1}});assert.ok(g.width*2<=1024&&g.height*2<=1024);assert.doesNotMatch(g.svg,/NaN|Infinity/);assert.ok(g.slice[2]>g.slice[0]&&g.slice[3]>g.slice[1]);}
+});
+
+test('native layouts include justify, equal-gap wrapping and main-axis fill; unsafe cases keep measured geometry',()=>{
+ const flex={dir:'row',wrap:'wrap',rowGap:10,columnGap:10,justifyContent:'start',alignContent:'start',alignItems:'start',topPadding:0,rightPadding:0,bottomPadding:0,leftPadding:0};
+ const root=shape('root','board',{flex,children:[shape('child')]});const exp=()=>sandbox.P2R.exportSelection(api(root)).document.design;
+ assert.equal(exp().layout.native,true);flex.rowGap=20;assert.equal(exp().layout.native,false);
+ flex.wrap='nowrap';flex.justifyContent='space-between';assert.equal(exp().layout.native,true);
+ root.children[0].layoutChild={horizontalSizing:'fill',verticalSizing:'fix'};assert.equal(exp().layout.native,true);
+ root.children[0].layoutChild.verticalSizing='auto';assert.equal(exp().layout.native,false);
+});
 test('default opacity, persistent IDs, measured text and button semantics survive export',()=>{
  const root=shape('root','board',{children:[shape('text','text',{characters:'Hello',fontSize:'20',fontFamily:'Inter',fontWeight:'400',textBounds:{width:44,height:25}}),shape('cta','rectangle',{name:'Play [button]'})]});
- const {document:d}=sandbox.P2R.exportSelection(api(root));assert.equal(d.design.opacity,1);assert.equal(d.design.children[0].text.measuredWidth,44);assert.equal(d.design.children[1].button,true);assert.equal(d.source.rootId,'root');assert.equal(d.version,2);
+ const {document:d}=sandbox.P2R.exportSelection(api(root));assert.equal(d.design.opacity,1);assert.equal(d.design.children[0].text.measuredWidth,44);assert.equal(d.design.children[1].button,true);assert.equal(d.source.rootId,'root');assert.equal(d.version,3);
 });
 test('text modes separate known substitutions, unknown fonts and complex typography',()=>{
  const text=shape('title','text',{characters:'Hello',fontSize:'20',fontFamily:'Inter',fontWeight:'400',textBounds:{width:44,height:25}});

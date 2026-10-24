@@ -1,15 +1,19 @@
 let doc,token;const el=id=>document.getElementById(id),status=s=>el('status').textContent=s;
 const parentOrigin=document.referrer?new URL(document.referrer).origin:'https://design.penpot.app';
 const post=(type,options)=>parent.postMessage({type,options},parentOrigin);
-const optionElements=['text-mode','native-groups','behaviors'];
-const exportOptions=()=>({textMode:el('text-mode').value,nativeGroups:el('native-groups').checked,behaviors:el('behaviors').checked});
-try{const saved=JSON.parse(localStorage.getItem('penpot-bridge-export-options')||'null');if(saved){if(['auto','live','exact'].includes(saved.textMode))el('text-mode').value=saved.textMode;el('native-groups').checked=saved.nativeGroups!==false;el('behaviors').checked=saved.behaviors===true}}catch{}
+const optionElements=['text-mode','native-groups','behaviors','smoothing'];
+const exportOptions=()=>({textMode:el('text-mode').value,nativeGroups:el('native-groups').checked,behaviors:el('behaviors').checked,smoothing:Number(el('smoothing').value)});
+try{const saved=JSON.parse(localStorage.getItem('penpot-bridge-export-options')||'null');if(saved){if(['auto','live','exact'].includes(saved.textMode))el('text-mode').value=saved.textMode;el('native-groups').checked=saved.nativeGroups!==false;el('behaviors').checked=saved.behaviors===true;if([0,.6,1].includes(saved.smoothing))el('smoothing').value=String(saved.smoothing)}}catch{}
 for(const id of optionElements)el(id).onchange=()=>{doc=undefined;el('send').disabled=true;el('save').disabled=true;try{localStorage.setItem('penpot-bridge-export-options',JSON.stringify(exportOptions()))}catch{}status('Options changed. Prepare the selection again.')};
 function preparing(value){el('export').disabled=value;for(const id of optionElements)el(id).disabled=value}
 const base64=bytes=>{let s='';for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(s)};
 async function request(path,method='GET',value){const r=await fetch(path,{method,headers:{Authorization:'Bearer '+token,...(value?{'Content-Type':'application/json'}:{})},body:value?JSON.stringify(value):undefined});const data=await r.json();if(!r.ok)throw Error(data.error||'Companion request failed');return data}
 const connect=async()=>{token=(await(await fetch('/session')).json()).token;const state=await request('/upload-status');el('connection').textContent=state.configured?'Helper running · image uploads ready.':'Helper running · image uploads need setup using the link below.';status('Select a board, then prepare and send it to Studio.')};
-connect().catch(()=>{el('connection').textContent='Cannot reach the helper. Run Start-Bridge.ps1, keep its window open, then reopen this companion.';status('Local connection unavailable.')});
+connect().catch(()=>{el('connection').textContent='Cannot reach the helper. Run Start-Penpot-Bridge.cmd, keep its window open, then reopen this companion.';status('Local connection unavailable.')});
+async function smoothPNG(spec){
+ const geometry=P2RCorners.surface(spec),url=URL.createObjectURL(new Blob([geometry.svg],{type:'image/svg+xml'}));
+ try{const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('Cannot render smooth corners'));img.src=url});const canvas=document.createElement('canvas');canvas.width=geometry.width*2;canvas.height=geometry.height*2;canvas.getContext('2d').drawImage(img,0,0);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw Error('Smooth corner image failed');return {bytes:new Uint8Array(await blob.arrayBuffer()),viewBox:[0,0,geometry.width,geometry.height],shapeWidth:geometry.width,shapeHeight:geometry.height,rotation:0}}finally{URL.revokeObjectURL(url)}
+}
 function download(name,data){const url=URL.createObjectURL(new Blob([data],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function refresh(){preparing(false);el('json').value=JSON.stringify(doc,null,2);el('send').disabled=false;el('save').disabled=false}
 el('export').onclick=()=>{preparing(true);el('send').disabled=true;el('save').disabled=true;status('Reading your selection…');post('export',exportOptions())};
@@ -29,8 +33,9 @@ window.addEventListener('message',async e=>{
    const nodes=new Map();const walk=n=>{nodes.set(n.id,n);n.children.forEach(walk)};walk(doc.design);
    for(let i=0;i<m.assets.length;i++){
     const a=m.assets[i];status(`Preparing image ${i+1} of ${m.assets.length}: ${a.name}`);
-    const result=await request('/assets','POST',{png:base64(new Uint8Array(a.bytes)),viewBox:a.viewBox,shapeWidth:a.shapeWidth,shapeHeight:a.shapeHeight,rotation:a.rotation});
-    doc.assets.find(v=>v.key===a.key).contentHash=result.hash;nodes.get(a.shapeId).rasterBounds=result.bounds;
+    const rendered=a.kind==='smooth'?await smoothPNG(a.spec):a;
+    const result=await request('/assets','POST',{png:base64(new Uint8Array(rendered.bytes)),viewBox:rendered.viewBox,shapeWidth:rendered.shapeWidth,shapeHeight:rendered.shapeHeight,rotation:rendered.rotation});
+    doc.assets.find(v=>v.key===a.key).contentHash=result.hash;if(a.kind!=='smooth')nodes.get(a.shapeId).rasterBounds=result.bounds;
    }
    refresh();status('Design and images prepared. Studio will upload new images and reuse existing ones automatically.');
   }

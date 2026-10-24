@@ -46,9 +46,23 @@ Aliases `_scroll`, `_panel`, `_closed`, `_button`, `_open:Shop`, and `_close` ar
 
 Panel actions generate one readable LocalScript owned by the importer. It reads fixed attributes and does not execute text supplied by the design. User gameplay scripts and references remain separate. Removing panel actions disables and retains the generated controller. Scrolling does not generate a script. Composited image containers cannot become scrolling containers; simplify the container effects first.
 
-These features require both the **2.2+ Studio plugin and helper**. New exports use document version 2 so older plugins reject unsupported features. Legacy version-1 bundles remain supported. Update the helper by extracting the latest Windows download into a new folder, close the old helper, and run the new launcher. Re-enter your own image key after restarting if needed.
+New exports require both the **2.3+ Studio plugin and helper** and use document version 3 so older plugins reject unsupported features. Legacy version-1 and version-2 bundles remain supported. Update the helper by extracting the latest Windows download into a new folder, close the old helper, and run the new launcher. Re-enter your own image key after restarting if needed.
 
-Native frames, labels, buttons, uniform corners, solid strokes, compatible linear gradients, measured desktop positions and simple row/column layouts. Name an element with `[button]` to create a button.
+### Native effects, layouts and import quality (2.3)
+
+Simple unequal corner radii and supported solid-color drop/inner shadows use native UICorner/UIShadow properties when Studio supports them. Compatibility PNGs are prepared alongside the design but are uploaded only when needed. Complex effects and clipped composited containers retain their image fallback. Native shadow softness can differ from Penpot; review it visually. Text shadows remain image-based.
+
+Native row/column layouts now support center/end alignment, space-between/around/evenly, equal-gap wrapping and main-axis fill children. Wrapping requires start justification, start line alignment and equal row/column gaps. Auto-sized children, cross-axis fill, margins, min/max constraints, reversed directions, grids and other unsupported combinations keep measured desktop geometry and report the limitation.
+
+The Studio **Review** page includes an **Import quality** report with totals and per-layer explanations: editable native appearance, image appearance, appearance covered by a parent image, smoothed surfaces, substituted fonts and native versus measured layouts. The on-screen layer list is limited to 150 entries; export a smaller selection to inspect every layer.
+
+### Optional smoothed corners (2.3)
+
+Choose **Smooth — 60%** or **Smooth — 100%** in the Penpot companion. This is an intentional styling change, rather than an exact reproduction of Penpot's circular corners. It applies to eligible solid surfaces with radii up to 120px, opacity 100%, no shadow/blur and at most one solid inner stroke up to 120px. Containers that clip children and scrolling containers retain their original corners. Ineligible layers are reported instead of silently changed.
+
+Smoothed surfaces are rendered once into compact transparent 2× images, uploaded through the existing image pipeline and displayed with 9-slice scaling. Their colors and corner shape are baked; edit those in Penpot and re-export. Native children and controls stay editable. No runtime Supercorner/EditableImage library is added to the game. Corner smoothing does not introduce rounded child clipping.
+
+Native frames, labels, buttons, supported corners/shadows, solid strokes, compatible linear gradients, measured desktop positions and supported row/column layouts. Name an element with `[button]` to create a button.
 
 Vectors, image fills and effects that Roblox cannot reproduce use transparent image surfaces. Complex typography and composited group effects can also use surfaces while keeping native controls and geometry. Baked visuals are changed in Penpot and re-exported; they are not editable native effects. Images use up to 2× resolution capped at 1024 pixels per dimension. Complex flex/grid uses measured positions. Desktop workflow only; automatic mobile redesign is outside scope.
 
@@ -83,4 +97,4 @@ python scripts/release.py
 
 `python scripts/release.py --windows` also downloads an official Node.js 24 Windows x64 runtime, verifies its SHA-256 against Node's published checksum list, and includes its license. The workflow builds and publishes release assets when package.json gains a new version on main. Source archives and releases exclude credentials, local caches and game files.
 
-See [contribution guidance](CONTRIBUTING.md), [release notes](RELEASE-NOTES.md), and [third-party credits](THIRD-PARTY-NOTICES.md). Parts of text modes and tag parsing are adapted from the MIT-licensed figrbx project. This project is independent of Roblox and Penpot.
+See [contribution guidance](CONTRIBUTING.md), [release notes](RELEASE-NOTES.md), and [third-party credits](THIRD-PARTY-NOTICES.md). Text modes/tag parsing adapt parts of figrbx; optional corner geometry adapts Supercorner/figma-squircle, with MIT notices retained. This project is independent of Roblox and Penpot.

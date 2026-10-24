@@ -17,12 +17,14 @@ end
 function Assets.status(token)
  return Http:JSONDecode(request(token,'/upload-status'))
 end
-function Assets.pending(document,plugin)
+function Assets.pending(document,plugin,Importer)
  local owner=(game.CreatorType==Enum.CreatorType.Group and game.CreatorId>0) and 'group:'..game.CreatorId or 'user:'..game:GetService('StudioService'):GetUserId()
  local registry=plugin:GetSetting('ImageRegistry_v2') or {}
  document.assetMap=document.assetMap or {}
  local pending,seen={},{}
+ local needed=Importer and Importer.assetFilter(document)
  for _,asset in ipairs(document.assets or {}) do
+  if needed and not needed(asset) then continue end
   if asset.contentHash then
    local id=registry[owner..':'..asset.contentHash]
    if id then document.assetMap[asset.key]=id end
@@ -31,12 +33,12 @@ function Assets.pending(document,plugin)
  end
  return pending
 end
-function Assets.upload(document,plugin,token,onProgress)
+function Assets.upload(document,plugin,token,onProgress,Importer)
  local userId=game:GetService('StudioService'):GetUserId()
  local isGroup=game.CreatorType==Enum.CreatorType.Group and game.CreatorId>0
  local owner=isGroup and 'group:'..game.CreatorId or 'user:'..userId
  local registry=plugin:GetSetting('ImageRegistry_v2') or {}
- local pending=Assets.pending(document,plugin)
+ local pending=Assets.pending(document,plugin,Importer)
  for index,asset in ipairs(pending) do
   assert(type(asset.contentHash)=='string' and asset.contentHash:match('^%x+$') and #asset.contentHash==64,'This older JSON has no embedded image data. Send the selection again from the updated Penpot companion.')
   if onProgress then onProgress(index,#pending,asset.name) end
@@ -81,7 +83,7 @@ function Assets.upload(document,plugin,token,onProgress)
   -- Persist each success immediately so a later failure/retry never duplicates an earlier upload.
   plugin:SetSetting('ImageRegistry_v2',registry)
  end
- Assets.pending(document,plugin)
+ Assets.pending(document,plugin,Importer)
  return #pending
 end
 return Assets

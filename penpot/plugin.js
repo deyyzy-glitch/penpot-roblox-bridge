@@ -1,6 +1,44 @@
+/* Corner geometry adapted from Supercorner/figma-squircle. See THIRD-PARTY-NOTICES.md. */
+globalThis.P2RCorners=(()=>{
+ function path(w,h,radii,smoothing){
+  const r=radii.map(v=>Math.max(0,Math.min(v,Math.min(w,h)/2))),s=Math.max(0,Math.min(smoothing,.999999));
+  const params=r.map(radius=>{
+   if(!radius)return {r:0,p:0};
+   const smooth=Math.min(s,Math.min(w,h)/2/radius-1),p=(1+smooth)*radius;
+   const arc=Math.sin(Math.PI/4*(1-smooth))*radius*Math.SQRT2;
+   const c=radius*Math.tan(Math.PI/8*smooth)*Math.cos(Math.PI/4*smooth),d=c*Math.tan(Math.PI/4*smooth);
+   const b=(p-arc-c-d)/3;return {r:radius,p,a:2*b,b,c,d,arc};
+  });
+  const corner=(v,i)=>{if(!v.r)return '';const {a,b,c,d,arc,r}=v,ab=a+b,abc=ab+c,cb=c+b,cba=cb+a;
+   return [
+    `c ${a} 0 ${ab} 0 ${abc} ${d} a ${r} ${r} 0 0 1 ${arc} ${arc} c ${d} ${c} ${d} ${cb} ${d} ${cba}`,
+    `c 0 ${a} 0 ${ab} ${-d} ${abc} a ${r} ${r} 0 0 1 ${-arc} ${arc} c ${-c} ${d} ${-cb} ${d} ${-cba} ${d}`,
+    `c ${-a} 0 ${-ab} 0 ${-abc} ${-d} a ${r} ${r} 0 0 1 ${-arc} ${-arc} c ${-d} ${-c} ${-d} ${-cb} ${-d} ${-cba}`,
+    `c 0 ${-a} 0 ${-ab} ${d} ${-abc} a ${r} ${r} 0 0 1 ${arc} ${-arc} c ${c} ${-d} ${cb} ${-d} ${cba} ${-d}`][i];};
+  const [tl,tr,br,bl]=params;
+  return `M ${tl.p} 0 L ${w-tr.p} 0 ${corner(tr,0)} L ${w} ${h-br.p} ${corner(br,1)} L ${bl.p} ${h} ${corner(bl,2)} L 0 ${tl.p} ${corner(tl,3)} Z`;
+ }
+ function surface(spec){
+  const {radii,smoothing,fill,stroke}=spec;
+  if(!Array.isArray(radii)||radii.length!==4||!radii.every(v=>Number.isFinite(v)&&v>=0&&v<=120)||!Number.isFinite(smoothing)||smoothing<0||smoothing>1)throw Error('Invalid smooth corner geometry');
+  const paint=p=>{if(!p||!/^#[0-9a-f]{6}$/i.test(p.color)||!Number.isFinite(p.opacity)||p.opacity<0||p.opacity>1)throw Error('Invalid corner paint');return p};paint(fill);if(stroke){paint(stroke);if(!Number.isFinite(stroke.width)||stroke.width<0||stroke.width>120)throw Error('Invalid corner stroke');}
+  const ext=radii.map(v=>Math.ceil(Math.max(v*(1+smoothing),stroke?.width||0))+1),[tl,tr,br,bl]=ext;
+  const w=Math.max(tl,bl)+Math.max(tr,br)+2,h=Math.max(tl,tr)+Math.max(bl,br)+2;
+  let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w*2}" height="${h*2}" viewBox="0 0 ${w} ${h}">`;
+  const outer=path(w,h,radii,smoothing);
+  svg+=`<path d="${outer}" fill="${fill.color}" fill-opacity="${fill.opacity}"/>`;
+  if(stroke){const t=stroke.width;if(!Number.isFinite(t)||t<0||t>Math.min(w,h)/2)throw Error('Invalid corner stroke');
+   const inner=path(w-2*t,h-2*t,radii.map(v=>Math.max(0,v-t)),smoothing);
+   svg+=`<defs><mask id="ring"><path d="${outer}" fill="white"/><path d="${inner}" transform="translate(${t} ${t})" fill="black"/></mask></defs><path d="${outer}" fill="${stroke.color}" fill-opacity="${stroke.opacity}" mask="url(#ring)"/>`;
+  }
+  return {svg:svg+'</svg>',width:w,height:h,slice:[Math.max(tl,bl)*2,Math.max(tl,tr)*2,(w-Math.max(tr,br))*2,(h-Math.max(bl,br))*2]};
+ }
+ return {path,surface};
+})();
+
 /* Shared between the companion plugin and the connected Penpot test harness. */
 globalThis.P2R = (() => {
-  const version = 2;
+  const version = 3;
   // Text-mode policy and underscore tag grammar adapted from figrbx; see THIRD-PARTY-NOTICES.md.
   function parseName(raw, enabled) {
     if(!enabled)return {name:raw,button:/\[button\]/i.test(raw)};
@@ -29,6 +67,7 @@ globalThis.P2R = (() => {
   function exportSelection(api, selection = [...api.selection], options = {}) {
     const textMode=options.textMode||'auto';if(!['auto','live','exact'].includes(textMode))throw Error('Invalid text mode.');
     const behaviors=options.behaviors===true,preferNativeGroups=options.nativeGroups!==false;
+    const smoothing=options.smoothing==null?0:Number(options.smoothing);if(!Number.isFinite(smoothing)||smoothing<0||smoothing>1)throw Error('Invalid corner smoothing.');
     if (selection.length !== 1) throw Error('Select exactly one board, component, or group.');
     const root = selection[0];
     if (!['board', 'group'].includes(root.type)) throw Error('Select a board, component board, or group.');
@@ -52,10 +91,12 @@ globalThis.P2R = (() => {
       if (s.fills === 'mixed') warn(s, 'Mixed text fills require a raster fallback for exact appearance.');
       const vector = ['path','boolean','svg-raw','image'].includes(s.type) || (s.type === 'ellipse' && Math.abs(s.width-s.height) > 0.1);
       const image = fills.some(f => f.imageId);
-      const radii = [s.borderRadiusTopLeft,s.borderRadiusTopRight,s.borderRadiusBottomRight,s.borderRadiusBottomLeft].map(v=>num(v));
+      const radii = [s.borderRadiusTopLeft,s.borderRadiusTopRight,s.borderRadiusBottomRight,s.borderRadiusBottomLeft].map(v=>num(v,num(s.borderRadius)));
+      const shadows=copy((s.shadows||[]).filter(v=>!v.hidden));
+      const nativeShadows=shadows.length>0&&s.type!=='text'&&shadows.every(v=>v.color?.color&&!v.color.gradient&&!v.color.image&&['drop-shadow','inner-shadow'].includes(v.style||'drop-shadow'));
       const reasons=[];
       if(fills.length>1)reasons.push('multiple fills');
-      if(s.shadows?.some(v=>!v.hidden))reasons.push('shadows');
+      if(shadows.length)reasons.push('shadows');
       if(s.blur||s.backgroundBlur)reasons.push('blur');
       if(s.blendMode&&s.blendMode!=='normal')reasons.push('blend mode');
       if(s.flipX||s.flipY)reasons.push('mirroring');
@@ -78,21 +119,29 @@ globalThis.P2R = (() => {
       const subtree=!!s.children?.length&&((num(s.opacity,1)<1&&!nativeGroup)||(s.clipContent&&(reasons.length||new Set(radii).size>1))||(s.blendMode&&s.blendMode!=='normal'));
       if(subtree)reasons.push('composited subtree');
       const raster=!suppressed&&(vector||image||reasons.length>0);
+      const nativeVisual=!suppressed&&raster&&!subtree&&!vector&&!image&&['board','group','rectangle'].includes(s.type)&&reasons.every(v=>v==='individual corner radii'||v==='shadows')&&(!shadows.length||(nativeShadows&&num(s.opacity,1)===1))&&!parsed.scroll;
+      const solid=fills.length===1&&fills[0].fillColor&&!fills[0].fillColorGradient;
+      const strokes=s.strokes||[];
+      const canSmooth=smoothing>0&&!suppressed&&!vector&&!image&&s.type!=='text'&&s.type!=='ellipse'&&solid&&radii.some(v=>v>0)&&radii.every(v=>v<=120)&&!shadows.length&&!s.blur&&!s.backgroundBlur&&(!s.blendMode||s.blendMode==='normal')&&!s.flipX&&!s.flipY&&!(s.clipContent&&s.children?.length)&&!parsed.scroll&&num(s.opacity,1)===1&&strokes.length<=1&&strokes.every(v=>v.strokeAlignment==='inner'&&(!v.strokeStyle||v.strokeStyle==='solid')&&!v.strokeColorGradient&&num(v.strokeWidth,1)<=Math.min(120,s.width/2,s.height/2));
+      let smooth;
+      if(canSmooth){const normalized=radii.map(v=>Math.min(v,Math.min(s.width,s.height)/2));const spec={radii:normalized,smoothing,fill:{color:fills[0].fillColor,opacity:num(fills[0].fillOpacity,1)},...(strokes.length?{stroke:{color:strokes[0].strokeColor||'#000000',opacity:num(strokes[0].strokeOpacity,1),width:num(strokes[0].strokeWidth,1)}}:{})};
+       const geometry=P2RCorners.surface(spec);smooth={key:`${api.currentFile.id}:${s.id}:smooth`,slice:geometry.slice};assets.push({key:smooth.key,shapeId:s.id,name:s.name+' smooth corners',kind:'smooth',spec});}
+      else if(smoothing>0&&radii.some(v=>v>0)&&!suppressed)warn(s,'Smooth corners skipped: use a solid surface, no shadows/blur, no clipped children, opacity 100%, radii ≤120px and at most one inner stroke.');
       if(parsed.scroll&&(raster||subtree))throw Error(s.name+': scrolling needs a native container. Remove its composited effects or opacity before exporting.');
       if((parsed.scroll||parsed.panel)&&s.type==='text')throw Error(s.name+': scroll/panel tags belong on a container.');
       if (raster) {
         const key = `${api.currentFile.id}:${s.id}`;
-        assets.push({key, shapeId:s.id, name:s.name, reason:[vector?'vector':image?'image-fill':null,...reasons].filter(Boolean).join(', '), format:'png', scale:2,skipChildren:!subtree});
-        if(reasons.length)warn(s,`Automatic image surface: ${reasons.join(', ')}. Native source objects are retained${subtree?'; descendant visuals are included in this effect surface':''}.`);
+        if(!smooth)assets.push({key, shapeId:s.id, name:s.name, reason:[vector?'vector':image?'image-fill':null,...reasons].filter(Boolean).join(', '), format:'png', scale:2,skipChildren:!subtree,fallback:!!nativeVisual});
+        if(reasons.length&&!smooth)warn(s,`${nativeVisual?'Compatibility image fallback':'Automatic image surface'}: ${reasons.join(', ')}. Native source objects are retained${subtree?'; descendant visuals are included in this effect surface':''}.`);
       }
       const n = {
         id:s.id, name:behaviors?parsed.name:s.name, type:s.type, x, y, width:s.width, height:s.height,
         rotation:parent ? num(s.rotation)-num(parent.rotation) : 0,
         opacity:num(s.opacity,1), visible:!s.hidden,
-        clip:!!s.clipContent, radius:radii[0] || num(s.borderRadius), fills,
+        clip:!!s.clipContent, radius:radii[0],radii,shadows:nativeShadows?shadows:[],nativeVisual:!!nativeVisual&&!smooth,smooth, fills,
         strokes:copy(s.strokes || []),
         constraints:{horizontal:s.constraintsHorizontal || 'left',vertical:s.constraintsVertical || 'top'},
-        assetKey:raster ? `${api.currentFile.id}:${s.id}` : undefined,
+        assetKey:raster&&!smooth ? `${api.currentFile.id}:${s.id}` : undefined,
         rasterSurface:raster&&!vector&&!image,rasterSubtree:subtree,
         visualSuppressed:suppressed,rasterOpacityBaked:raster,
         button:parsed.button,nativeGroup,
@@ -100,7 +149,7 @@ globalThis.P2R = (() => {
         children:[]
       };
       if (s.type === 'text') {
-        n.text={value:s.characters,size:num(s.fontSize,16),family:s.fontFamily,robloxFamily:match.family,weight:num(s.fontWeight,400),
+        n.text={value:s.characters,size:num(s.fontSize,16),family:s.fontFamily,robloxFamily:match.family,fontSubstituted:!match.exact,weight:num(s.fontWeight,400),
           italic:s.fontStyle === 'italic',align:s.align,verticalAlign:s.verticalAlign,
           lineHeight:num(s.lineHeight,1.2),letterSpacing:num(s.letterSpacing),transform:s.textTransform,
           measuredWidth:s.textBounds.width,measuredHeight:s.textBounds.height};
@@ -110,20 +159,25 @@ globalThis.P2R = (() => {
         n.layout={dir:f.dir,wrap:f.wrap,gap:f.dir.startsWith('row')?f.columnGap:f.rowGap,
           align:f.alignItems,justify:f.justifyContent,
           padding:[f.topPadding,f.rightPadding,f.bottomPadding,f.leftPadding]};
-        const supported=['row','column'].includes(f.dir) && f.wrap !== 'wrap' &&
-          ['start','center','end'].includes(f.alignItems || 'start') && (f.justifyContent || 'start')==='start' &&
+        const supported=['row','column'].includes(f.dir) &&
+          ['start','center','end'].includes(f.alignItems || 'start') && ['start','center','end','space-between','space-around','space-evenly'].includes(f.justifyContent || 'start') &&
+          (f.wrap!=='wrap'||((f.justifyContent||'start')==='start'&&(f.alignContent||'start')==='start'&&num(f.rowGap)===num(f.columnGap)))&&
           (s.children || []).every(c=>!c.layoutChild?.absolute &&
-            !['auto','fill'].includes(c.layoutChild?.horizontalSizing) && !['auto','fill'].includes(c.layoutChild?.verticalSizing) &&
+            !['auto'].includes(c.layoutChild?.horizontalSizing) && !['auto','fill'].includes(f.dir==='row'?c.layoutChild?.verticalSizing:c.layoutChild?.horizontalSizing) &&
+            !(f.wrap==='wrap'&&['fill'].includes(f.dir==='row'?c.layoutChild?.horizontalSizing:c.layoutChild?.verticalSizing))&&
+            [null,undefined,'auto'].includes(c.layoutChild?.alignSelf)&&
+            !['maxWidth','maxHeight','minWidth','minHeight'].some(k=>c.layoutChild?.[k]!=null)&&
             !['topMargin','rightMargin','bottomMargin','leftMargin'].some(k=>num(c.layoutChild?.[k])!==0));
-        n.layout.native= supported&&!raster;
+        n.layout.native= supported&&(!raster||nativeVisual||smooth);
         if (!supported) warn(s, 'Complex flex is baked to measured desktop positions; resize constraints remain available.');
       }
       if (s.grid) warn(s, 'Grid is baked to measured desktop positions.');
+      if(s.layoutChild)n.layoutChild={horizontalSizing:s.layoutChild.horizontalSizing,verticalSizing:s.layoutChild.verticalSizing};
       n.children=(s.children || []).map(c=>visit(c,s,depth+1,suppressed||subtree));
       return n;
     }
     const document={format:'penpot-roblox',version,source:{fileId:api.currentFile.id,pageId:api.currentPage.id,rootId:root.id},
-      design:visit(root,null,0),warnings,assets,assetMap:{},fontMap:{},options:{textMode,behaviors,nativeGroups:preferNativeGroups},capabilities:['text-modes','native-groups','behavior-tags']};
+      design:visit(root,null,0),warnings,assets,assetMap:{},fontMap:{},options:{textMode,behaviors,nativeGroups:preferNativeGroups,smoothing},capabilities:['text-modes','native-groups','behavior-tags','native-effects','flex-layouts','quality-report','smooth-corners']};
     if(behaviors){
       const panels=new Set();const collect=n=>{if(n.behavior.panel){if(panels.has(n.behavior.panel))throw Error('Duplicate panel name: '+n.behavior.panel);panels.add(n.behavior.panel);}n.children.forEach(collect)};collect(document.design);
       const resolve=(n,nearest)=>{const b=n.behavior;nearest=b.panel||nearest;if(n.initiallyClosed&&!b.panel)throw Error(n.name+': [closed] needs a [panel] tag.');if(b.action){if(!b.target)b.target=nearest||'';if(!panels.has(b.target))throw Error(n.name+': action has no matching panel: '+b.target);}n.children.forEach(c=>resolve(c,nearest))};resolve(document.design,'');
@@ -133,6 +187,7 @@ globalThis.P2R = (() => {
   async function exportAssets(bundle) {
     const result=[];
     for(const a of bundle.document.assets) {
+      if(a.kind==='smooth'){result.push({...a});continue;}
       const shape=bundle.shapes.get(a.shapeId);
       const svg=await shape.export({type:'svg',skipChildren:a.skipChildren});
       const header=Array.from(svg.slice(0,1500),v=>String.fromCharCode(v)).join('');

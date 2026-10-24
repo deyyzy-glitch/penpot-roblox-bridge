@@ -112,7 +112,7 @@ return function(plugin,Importer,Assets)
   local ok,value=pcall(function()token=Assets.connect();return Assets.status(token)end)
   if not ok then
    token=nil;connection.Text='○  Local helper · unreachable';connection.TextColor3=C.amber
-   helperState.Text='Cannot reach the helper. Run Start-Bridge.ps1, then check again. If Roblox denied access, check this plugin’s HTTP permission.';helperState.TextColor3=C.amber
+   helperState.Text='Cannot reach the helper. Run Start-Penpot-Bridge.cmd, then check again. If Roblox denied access, check this plugin’s HTTP permission.';helperState.TextColor3=C.amber
    show('Connection failed. Follow the Setup steps.',true);return false
   end
   connection.Text='●  Local helper · running';connection.TextColor3=C.green
@@ -124,16 +124,16 @@ return function(plugin,Importer,Assets)
  local function loadDocument(value)
   local d=type(value)=='string' and Http:JSONDecode(value) or value
   Importer.validate(d);document=d;previewPlan=nil
-  if Assets then Assets.pending(d,plugin)end
+  if Assets then Assets.pending(d,plugin,Importer)end
   local count=0;local function walk(n)count+=1;for _,c in ipairs(n.children)do walk(c)end end;walk(d.design)
   sourceTitle.Text=d.design.name;sourceMeta.Text=string.format('%d elements  ·  %d image surfaces\n%d × %d design pixels',count,#(d.assets or {}),d.design.width,d.design.height)
   show('Design received. Ready to review.');showTab('Design');primary.Text='Review import'
  end
  local function previewClick()
   assert(document,'Choose a design first.')
-  if Assets then Assets.pending(document,plugin)end
+  if Assets then Assets.pending(document,plugin,Importer)end
   previewPlan=Importer.prepare(document,target,table.clone(options));local s=previewPlan.stats
-  local pending=Assets and #Assets.pending(document,plugin) or 0
+  local pending=Assets and #Assets.pending(document,plugin,Importer) or 0
   reviewSummary.Text=string.format('%d new  ·  %d changed\n%d unchanged  ·  %d removed',s.added,s.updated,s.unchanged,s.removed)
   local lines={pending>0 and string.format('%d unique images will upload to your Roblox account.',pending) or 'No new image uploads needed.'}
   if document.options then
@@ -141,6 +141,11 @@ return function(plugin,Importer,Assets)
    table.insert(lines,document.options.behaviors and 'Scrolling/panel tags enabled. Panel actions add a generated controller.' or 'Optional behavior tags are off.')
   end
   if previewPlan.nativeGroups then table.insert(lines,'Suitable opacity groups remain native and editable.') end
+  local q=previewPlan.quality
+  table.insert(lines,string.format('\nIMPORT QUALITY\n%d native · %d image surfaces · %d smoothed surfaces\n%d covered by an ancestor image · %d substituted fonts\n%d native layouts',q.native,q.images,q.smoothed,q.covered,q.fonts,q.layouts))
+  table.insert(lines,'')
+  for index,item in q.items do if index<=150 then table.insert(lines,item.name..' — '..item.detail)end end
+  if #q.items>150 then table.insert(lines,string.format('… %d more layers. Export a smaller selection for a complete on-screen report.',#q.items-150))end
   if s.conflicts>0 then table.insert(lines,string.format('%d local overrides will be preserved.',s.conflicts))end
   if s.classChanges>0 then table.insert(lines,string.format('%d object type changes require the option to be enabled.',s.classChanges))end
   if options.force then table.insert(lines,'Design values will overwrite unlocked local appearance changes.')end
@@ -153,7 +158,7 @@ return function(plugin,Importer,Assets)
  local function applyClick()
   assert(document and previewPlan,'Review the import first.')
   local latest=Importer.prepare(document,target,table.clone(options));for k,v in pairs(latest.stats)do assert(v==previewPlan.stats[k],'The scene changed. Review the import again.')end
-  if Assets then Assets.upload(document,plugin,token,function(index,total,name)show(string.format('Uploading image %d of %d: %s',index,total,name))end)end
+  if Assets then Assets.upload(document,plugin,token,function(index,total,name)show(string.format('Uploading image %d of %d: %s',index,total,name))end,Importer)end
   latest=Importer.prepare(document,target,table.clone(options))
   local imported=Importer.apply(latest,function(done,total)show(string.format('Building native UI… %d / %d',done,total))end)
   Selection:Set({imported});previewPlan=nil;primary.Text='Review import';showTab('Design');show('Imported successfully. Re-export this design to sync changes.');connection.Text=token and '●  Local helper · used for this import' or '●  Bundle imported';connection.TextColor3=C.green
