@@ -1,3 +1,14 @@
+# Penpot Bridge 2.5.0
+
+- Added **Options → Use native uniform grids**, off by default. Updated Penpot exports retain grid metadata; compatible grids create native UIGridLayout and padding, while unsafe grids keep measured positions with a review warning. Toggling off retires layout components outside the rendered hierarchy and preserves slot instances.
+- Added two reduced real Penpot export fixtures with anonymized source IDs and placeholder image mappings: the Fredoka Mine panel and padded SVG header chart. No image pixels, original uploaded IDs or credentials are included. These add structural/conversion regressions rather than visual screenshot assertions.
+
+- The Design tab includes Verify import, using the received design or bundle as its reference. It checks imported identities, object classes, parenting, converted properties, fonts, missing image references, visible text overflow, image loading and newly overlapping siblings.
+- Local edits and locks are informational. Declared font substitutions are notes; missing image references remain errors. Findings select affected objects without repairing or overwriting them.
+- The verifier requires no AI or additional account. Receive the design again after restarting Studio. This is not a screenshot comparison; image-loading warnings can be temporary. Rotated/scrolling overlap checks are excluded and large overlap scans are bounded.
+
+Validation: 40 Node tests, 37 Studio regression checks (18 verifier and 19 grid/real-export checks), a findings-panel and object-selection smoke check, and 2,071 checks against a saved real Stats export in a disposable Studio sandbox (zero property errors; 13 declared font substitution notes and 12 image-not-yet-loaded warnings). Update both the helper and Studio plugin, restart Studio and reopen the Penpot companion. Existing version 1–4 bundles remain supported.
+
 # Penpot Bridge 2.4.2
 
 - Individual rectangles, text, ellipses, paths, Boolean shapes, SVG artwork and image layers can now be prepared directly. Grouping them first is no longer required.

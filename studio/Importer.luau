@@ -132,6 +132,13 @@ function Importer.validate(d)
    assert(n.layout.justify==nil or table.find({'start','center','end','space-between','space-around','space-evenly'},n.layout.justify),'Invalid justify')
    assert(n.layout.align==nil or table.find({'start','center','end'},n.layout.align),'Invalid alignment')
   end
+  if n.grid then
+   local g=n.grid;assert(type(g)=='table' and (g.dir=='row'or g.dir=='column'),'Invalid grid direction')
+   assert(type(g.padding)=='table'and #g.padding==4,'Invalid grid padding');for _,v in g.padding do number(v,0,100000,'grid padding')end
+   for _,k in {'columnGap','rowGap'}do number(g[k],0,100000,'grid gap')end
+   for _,k in {'columns','rows'}do number(g[k],0,5000,'grid tracks');assert(g[k]%1==0,'Grid track counts must be integers')end
+   assert(type(g.unsupportedCells)=='boolean','Invalid grid cell metadata')
+  end
   if n.layoutChild then for _,key in {'horizontalSizing','verticalSizing'} do assert(n.layoutChild[key]==nil or table.find({'fix','auto','fill'},n.layoutChild[key]),'Invalid child sizing')end end
   for _,c in ipairs(n.children) do walk(c,depth+1) end
  end
@@ -146,10 +153,51 @@ local function axis(pos,size,parentSize,constraint)
  if constraint=='scale' and parentSize>0 then return pos/parentSize,0,size/parentSize,0 end
  return 0,pos,0,size
 end
+local function uniformGrid(n)
+ local g=n.grid;if not g then return nil,'no grid metadata' end
+ if g.unsupportedCells then return nil,'cell spans, absolute positioning or child sizing constraints' end
+ if n.layout or #n.children==0 then return nil,'empty grid or mixed layout systems' end
+ if n.smooth or n.rasterSubtree or n.visualSuppressed then return nil,'composited or image-based container' end
+ local sorted=table.clone(n.children);local row=g.dir=='row';local first=sorted[1]
+ local width,height=first.width,first.height
+ if width<=0 or height<=0 then return nil,'zero-size cells' end
+ for _,c in sorted do
+  if c.visible==false or c.visualSuppressed or c.rotation~=0 then return nil,'hidden, covered or rotated cells' end
+  if math.abs(c.width-width)>.1 or math.abs(c.height-height)>.1 then return nil,'unequal cell sizes' end
+  if c.layoutChild and (c.layoutChild.horizontalSizing=='auto'or c.layoutChild.horizontalSizing=='fill'or c.layoutChild.verticalSizing=='auto'or c.layoutChild.verticalSizing=='fill')then return nil,'automatic cell sizing' end
+ end
+ table.sort(sorted,function(a,b)
+  local primary=row and 'y'or 'x';local secondary=row and 'x'or 'y'
+  local ap,bp=math.floor(a[primary]*10+.5),math.floor(b[primary]*10+.5)
+  if ap~=bp then return ap<bp end
+  local av,bv=math.floor(a[secondary]*10+.5),math.floor(b[secondary]*10+.5)
+  if av~=bv then return av<bv end
+  return a.id<b.id
+ end)
+ local pad=g.padding;local contentWidth=n.width-pad[2]-pad[4];local contentHeight=n.height-pad[1]-pad[3]
+ local maxCells=row and g.columns or g.rows
+ if maxCells==0 then
+  maxCells=0;local primary=row and 'y'or 'x'
+  for _,c in sorted do if math.abs(c[primary]-sorted[1][primary])<=.1 then maxCells+=1 end end
+ end
+ if maxCells<1 then return nil,'no regular tracks' end
+ local usedColumns=row and math.min(maxCells,#sorted)or math.ceil(#sorted/maxCells)
+ local usedRows=row and math.ceil(#sorted/maxCells)or math.min(maxCells,#sorted)
+ if usedColumns*width+(usedColumns-1)*g.columnGap>contentWidth+.1 or usedRows*height+(usedRows-1)*g.rowGap>contentHeight+.1 then return nil,'cells exceed the padded content box' end
+ local order={}
+ for ix,c in sorted do
+  local col=row and (ix-1)%maxCells or math.floor((ix-1)/maxCells)
+  local line=row and math.floor((ix-1)/maxCells)or (ix-1)%maxCells
+  if math.abs(c.x-(pad[4]+col*(width+g.columnGap)))>.1 or math.abs(c.y-(pad[1]+line*(height+g.rowGap)))>.1 then return nil,'holes, offsets, distributed spacing or irregular placement' end
+  order[c.id]=ix
+ end
+ return {width=width,height=height,maxCells=maxCells,order=order}
+end
 local function descriptors(d,options)
  local result,warnings={},table.clone(d.warnings or {})
  local capabilities=options.capabilities or Importer.capabilities()
  local quality={native=0,images=0,covered=0,smoothed=0,fonts=0,layouts=0,items={}}
+ local grids={}
  local function warn(n,s) table.insert(warnings,n.name..': '..s) end
  local function add(id,parent,class,props,attributes)
   local item={id=id,parent=parent,class=class,props=props,attributes=attributes}
@@ -173,6 +221,12 @@ local function descriptors(d,options)
   local text=n.type=='text'
   local modern=nativeVisual(n,capabilities)
   local raster=n.assetKey~=nil and not modern
+  local grid
+  if n.grid and options.nativeGrids then
+   local reason
+   if raster then reason='container requires an image surface'else grid,reason=uniformGrid(n)end
+   if grid then grids[n.id]=grid else warn(n,'Native grid skipped: '..reason..'; measured positions retained.')end
+  end
   local image=raster and not n.rasterSurface
   local class=scroll and 'ScrollingFrame' or nativeGroup and 'CanvasGroup' or text and (n.button and 'TextButton' or 'TextLabel') or (image and (n.button and 'ImageButton' or 'ImageLabel') or (n.button and 'TextButton' or 'Frame'))
   local f=(n.fills or {})[1]
@@ -183,6 +237,7 @@ local function descriptors(d,options)
    ssx,sx,ssy,sy=options.responsive and 1 or 0,options.responsive and 0 or n.width,options.responsive and 1 or 0,options.responsive and 0 or n.height
   end
   local layoutOrder=z
+  if parent and grids[parent]then layoutOrder=grids[parent].order[n.id]end
   if parentNode and parentNode.layout and parentNode.layout.native and (not parentNode.assetKey or nativeVisual(parentNode,capabilities))then
    local axisName=parentNode.layout.dir=='row' and 'x' or 'y'
    layoutOrder=0
@@ -310,6 +365,12 @@ local function descriptors(d,options)
    local main=parentNode.layout.dir=='row' and 'horizontalSizing' or 'verticalSizing'
    if n.layoutChild and n.layoutChild[main]=='fill' then add(n.id..'::flex',n.id,'UIFlexItem',{Name='Penpot Flex',FlexMode=Enum.UIFlexMode.Fill});if main=='horizontalSizing' then p.Size=UDim2.new(0,0,p.Size.Y.Scale,p.Size.Y.Offset)else p.Size=UDim2.new(p.Size.X.Scale,p.Size.X.Offset,0,0)end end
   end
+  if grid then
+   local g=n.grid;local pad=g.padding
+   add(n.id..'::grid-padding',n.id,'UIPadding',{Name='Penpot Grid Padding',PaddingTop=UDim.new(0,pad[1]),PaddingRight=UDim.new(0,pad[2]),PaddingBottom=UDim.new(0,pad[3]),PaddingLeft=UDim.new(0,pad[4])})
+   add(n.id..'::grid',n.id,'UIGridLayout',{Name='Penpot Grid',CellSize=UDim2.fromOffset(grid.width,grid.height),CellPadding=UDim2.fromOffset(g.columnGap,g.rowGap),FillDirection=g.dir=='row'and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical,FillDirectionMaxCells=grid.maxCells,StartCorner=Enum.StartCorner.TopLeft,SortOrder=Enum.SortOrder.LayoutOrder,HorizontalAlignment=Enum.HorizontalAlignment.Left,VerticalAlignment=Enum.VerticalAlignment.Top})
+   quality.layouts+=1;warn(n,'Native grid enabled: UIGridLayout controls direct child sizes and positions, including slots you add locally.')
+  end
   if n.layout and n.layout.native and not raster then
    local l=n.layout;local pad=l.padding;local horizontal=l.dir=='row'
    local h=horizontal and Enum.HorizontalAlignment.Left or (({start=Enum.HorizontalAlignment.Left,center=Enum.HorizontalAlignment.Center,['end']=Enum.HorizontalAlignment.Right})[l.align] or Enum.HorizontalAlignment.Left)
@@ -325,7 +386,7 @@ local function descriptors(d,options)
   if substituted then quality.fonts+=1 end
   if n.layout and n.layout.native and not raster then quality.layouts+=1 end
   table.insert(quality.items,{name=n.name,id=n.id,mode=mode,detail=(substituted and ('Font: '..n.text.family..' → '..n.text.robloxFamily)or modern and 'Native effects; compatibility image unused' or n.smooth and 'Smoothed 9-slice image; native children' or raster and 'Image appearance; source geometry retained' or n.visualSuppressed and 'Appearance included in ancestor image' or 'Editable native appearance')..(n.layout and (n.layout.native and not raster and '; native layout' or '; measured positions')or '')})
-  local detail=quality.items[#quality.items];if text and n.text.runs and not raster then detail.detail..='; RichText runs' end;if n.tintColor then detail.detail..='; tintable mask'end;if n.glow then detail.detail..='; baked silhouette glow'end;if n.slice then detail.detail..='; explicit nine-slice'end;if n.tokens and next(n.tokens)then detail.detail..='; token bindings retained'end
+  local detail=quality.items[#quality.items];if grid then detail.detail..='; native uniform grid'end;if text and n.text.runs and not raster then detail.detail..='; RichText runs' end;if n.tintColor then detail.detail..='; tintable mask'end;if n.glow then detail.detail..='; baked silhouette glow'end;if n.slice then detail.detail..='; explicit nine-slice'end;if n.tokens and next(n.tokens)then detail.detail..='; token bindings retained'end
   for _,c in ipairs(n.children) do walk(c,n.id,n,opacity) end
  end
  walk(d.design,nil,nil,1)
@@ -413,6 +474,109 @@ function Importer.prepare(d,target,options)
  end
  return {document=d,target=target,options=options,key=key,wrapper=wrapper,index=index,items=items,wanted=wanted,stats=stats,warnings=warnings,changes=changes,nativeGroups=nativeGroups,quality=quality}
 end
+-- Read-only audit against the received design, using the same engine-normalized
+-- conversion as import. P2R_Last distinguishes local edits from unapplied values.
+function Importer.verify(d,target,options)
+ Importer.validate(d);options=table.clone(options or {});options.force=false
+ local key=d.source.fileId..'/'..d.source.rootId
+ local report={issues={},errors=0,warnings=0,notes=0,checks=0,omitted=0}
+ local function issue(level,code,name,message,instance,property)
+  local counter=level=='error' and 'errors' or level=='warning' and 'warnings' or 'notes'
+  report[counter]+=1
+  if #report.issues<500 then table.insert(report.issues,{level=level,code=code,name=name,message=message,instance=instance,property=property})else report.omitted+=1 end
+ end
+ local wrapper
+ if target and target:GetAttribute('P2R_Design')==key then wrapper=target
+ elseif target then
+  for _,i in target:GetChildren()do if i:GetAttribute('P2R_Design')==key then
+   if wrapper then issue('error','duplicate-import',i.Name,'Multiple imports of this design exist here.',i)else wrapper=i end
+  end end
+ end
+ if not wrapper then issue('error','missing-import',d.design.name,'No matching import found here. Import this design or select its imported container.',target);return report end
+ report.wrapper=wrapper
+ local items,_,quality=descriptors(d,options)
+ local index,duplicates,wanted={},{},{}
+ local names={};local function namesFor(n)names[n.id]=n.name;for _,c in n.children do namesFor(c)end end;namesFor(d.design)
+ for _,i in wrapper:GetDescendants()do
+  local id=i:GetAttribute('P2R_Id')
+  if id and i:GetAttribute('P2R_Source')==key and not i:GetAttribute('P2R_Retired')then
+   if index[id]then duplicates[id]=true;issue('error','duplicate-id',i.Name,'Multiple objects own the same imported ID.',i)else index[id]=i end
+  end
+ end
+ local function visible(i)
+  while i and i~=wrapper.Parent do
+   if i:IsA('GuiObject')and not i.Visible then return false end
+   if i:IsA('CanvasGroup')and i.GroupTransparency>=1 then return false end
+   if i:IsA('ScreenGui')and not i.Enabled then return false end
+   i=i.Parent
+  end
+  return true
+ end
+ for ix,item in items do
+  wanted[item.id]=true;report.checks+=1
+  local i=index[item.id];local name=item.props.Name or item.id
+  local base=item.id:match('^(.-)::');if base and names[base]then name=names[base]..' / '..name end
+  if not i then issue('error','missing-object',name,'Expected '..item.class..' is missing.',item.parent and index[item.parent]or wrapper)
+  elseif not duplicates[item.id]then
+   if i.ClassName~=item.class then issue('error','wrong-class',name,'Expected '..item.class..', found '..i.ClassName..'.',i)
+   else
+    local last=decode(i:GetAttribute('P2R_Last'));local edits={};local checkedImage=false
+    for prop,value in item.props do
+     report.checks+=1
+     local actual=i[prop];local differs=signature(actual)~=signature(value)
+     if prop=='Image' and item.props.ImageTransparency~=1 and (value==''or actual=='')then
+      checkedImage=true;issue('error','missing-image',name,value==''and 'The design has no resolved image asset. Receive the uploaded bundle or import images before checking again.'or 'The imported image reference is empty.',i,prop)
+     elseif differs then
+      if locked(i,prop)or(last[prop]and signature(actual)~=last[prop])then table.insert(edits,prop)
+      else issue('error','design-difference',name,prop..' differs from the received design. Review and reimport to apply the design value.',i,prop)end
+     end
+    end
+    if #edits>0 then table.sort(edits);issue('note','local-edit',name,'Local changes or locks: '..table.concat(edits,', ')..'. Kept as informational findings; they may be intentional.',i)end
+    local parent=item.parent and index[item.parent]or wrapper
+    if i.Parent~=parent then issue('warning','moved-object',name,'Object is outside its expected parent. This may be an intentional local move.',i)end
+    if (i:IsA('TextLabel')or i:IsA('TextButton'))and i.Text~=''and i.TextTransparency<1 and visible(i)then
+     if i.AbsoluteSize.X>0 and i.AbsoluteSize.Y>0 then
+      report.checks+=1;if not i.TextFits then issue('warning','text-overflow',name,'Text does not fit its current box. Review the text, font and available space.',i)end
+     else issue('note','unmeasured-text',name,'Text fitting could not be checked because this object has no rendered size.',i)end
+    end
+    if (i:IsA('ImageLabel')or i:IsA('ImageButton'))and not checkedImage and i.Image~=''and i.ImageTransparency<1 and visible(i)then
+     report.checks+=1;if not i.IsLoaded then issue('warning','image-not-loaded',name,'Image is not loaded in this viewport yet. This can be temporary; check moderation/access and verify again.',i)end
+    end
+   end
+  end
+  if ix%100==0 then task.wait()end
+ end
+ for id,i in index do if not wanted[id]and not i:GetAttribute('P2R_Stale')then issue('note','extra-owned-object',i.Name,'Imported object is absent from the received design. Review removal on the next import.',i)end end
+ -- Report declared substitutions separately; matching a mapped font is not proof
+ -- that its glyphs are identical to the original Penpot family.
+ for _,q in quality.items do if q.detail:sub(1,6)=='Font: 'then issue('note','font-substitution',q.name,q.detail..'. This declared substitution needs visual review for exact glyph appearance.',index[q.id])end end
+ -- Only new overlaps count: intentional design overlaps, rotations, scrolling
+ -- regions and hidden nodes are excluded. Bound pair work for large boards.
+ local pairsChecked=0;local limited=false
+ local function intersects(ax,ay,aw,ah,bx,by,bw,bh,slack)
+  return math.min(ax+aw,bx+bw)-math.max(ax,bx)>slack and math.min(ay+ah,by+bh)-math.max(ay,by)>slack
+ end
+ local function overlaps(n,rotated)
+  rotated=rotated or n.rotation~=0
+  local parent=index[n.id]
+  if not rotated and parent and not parent:IsA('ScrollingFrame')and not n.rasterSubtree then
+   local candidates={}
+   for _,c in n.children do local i=index[c.id];if c.visible~=false and not c.visualSuppressed and c.rotation==0 and i and i:IsA('GuiObject')and i.Parent==parent and i.AbsoluteSize.X>0 and visible(i)then table.insert(candidates,{node=c,instance=i})end end
+   for a=1,#candidates do for b=a+1,#candidates do
+    if pairsChecked>=10000 then limited=true;break end;pairsChecked+=1
+    local x,y=candidates[a],candidates[b];local nx,ny=x.node,y.node
+    if not intersects(nx.x,nx.y,nx.width,nx.height,ny.x,ny.y,ny.width,ny.height,1)then
+     local px,sx,py,sy=x.instance.AbsolutePosition,x.instance.AbsoluteSize,y.instance.AbsolutePosition,y.instance.AbsoluteSize
+     report.checks+=1;if intersects(px.X,px.Y,sx.X,sx.Y,py.X,py.Y,sy.X,sy.Y,2)then issue('warning','new-overlap',nx.name,'Overlaps '..ny.name..' here, although they are apart in the design. Review local edits and layout.',x.instance)end
+    end
+   end;if limited then break end end
+  end
+  for _,c in n.children do if not limited then overlaps(c,rotated)end end
+ end;overlaps(d.design,false)
+ if limited then issue('note','overlap-limit',d.design.name,'Overlap scan stopped after 10,000 sibling pairs. Verify a smaller design for complete overlap coverage.',wrapper)end
+ table.sort(report.issues,function(a,b)local rank={error=1,warning=2,note=3};if a.level~=b.level then return rank[a.level]<rank[b.level]end;if a.name~=b.name then return a.name<b.name end;return a.code..(a.property or '')<b.code..(b.property or '')end)
+ return report
+end
 function Importer.apply(plan,onProgress)
  assert(plan.stats.classChanges==0 or plan.options.allowClassChanges,'Class changes require confirmation; old objects will be retained')
  local history=game:GetService('ChangeHistoryService')
@@ -474,7 +638,7 @@ function Importer.apply(plan,onProgress)
      if i:IsA('GuiObject') and not i:GetAttribute('P2R_HiddenByImporter') then
       i:SetAttribute('P2R_PreStaleVisible',i.Visible);i:SetAttribute('P2R_HiddenByImporter',true);i.Visible=false
      elseif i:IsA('UIGradient') or i:IsA('UIStroke') or i:IsA('UIShadow') then if not i:GetAttribute('P2R_HiddenByImporter')then i:SetAttribute('P2R_PreStaleEnabled',i.Enabled)end;i:SetAttribute('P2R_HiddenByImporter',true);i.Enabled=false
-     elseif i:IsA('UIListLayout') or i:IsA('UIPadding') or i:IsA('UICorner') or i:IsA('UIFlexItem')then
+     elseif i:IsA('UIListLayout') or i:IsA('UIGridLayout') or i:IsA('UIPadding') or i:IsA('UICorner') or i:IsA('UIFlexItem')then
       -- Components have no Enabled flag: retain them outside the rendered hierarchy.
       local retained=wrapper:FindFirstChild('P2R Retained Components')
       if not retained then retained=Instance.new('Folder');retained.Name='P2R Retained Components';retained.Parent=wrapper end

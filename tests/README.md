@@ -1,5 +1,9 @@
 # Verification
 
+`grid-fixture.mjs` and `studio-grids.luau` cover the opt-in native grid path. The 19 Studio checks cover default-off behavior, padded row/column placement, spatial ordering despite paint order, idempotence, verifier compatibility, on/off/on identity preservation, safe rejection of irregular/effected cells, invalid metadata, local additions after disabling layout, and both captured real exports. `real-fixtures.test.mjs` runs four Node regressions against the reduced real captures under `fixtures/real`; the fixture README documents provenance and exclusions.
+
+`verifier-fixture.mjs` and `studio-verifier.luau` exercise the read-only post-import verifier. Pass the fixture's document and Importer to the test function outside an MCP recording. Its 18 Studio checks cover clean imports, known font substitutions, old imported fonts, local edits and locks, missing/duplicate/wrong-class objects, parenting, empty and unresolved image references, expected versus new overlaps, user objects, unchanged instance state, duplicate wrappers, and visible versus hidden text overflow. The sandbox is removed after testing. A Studio UI-host smoke check additionally exercises loading the document, verifying the selected import, and rendering finding rows.
+
 Run Node tests with `node --test --test-isolation=none tests/bridge.test.mjs tests/exporter.test.mjs tests/cloud.test.mjs`.
 Include `tests/image-tools.test.mjs` for mask deduplication, alpha-preserving dilation, bounded silhouette blur, processed previews and portable glow payloads.
 

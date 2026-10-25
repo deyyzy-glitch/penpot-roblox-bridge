@@ -232,7 +232,20 @@ globalThis.P2R = (() => {
         n.layout.native= supported&&(!raster||nativeVisual||smooth);
         if (!supported) warn(s, 'Complex flex is baked to measured desktop positions; resize constraints remain available.');
       }
-      if (s.grid) warn(s, 'Grid is baked to measured desktop positions.');
+      if (s.grid) {
+        const g=s.grid;
+        const unsupported=(s.children||[]).some(c=>{
+          const cell=c.layoutCell||{},l=c.layoutChild||{};
+          return (cell.rowSpan||1)!==1||(cell.columnSpan||1)!==1||l.absolute===true||
+            ['auto','fill'].includes(l.horizontalSizing)||['auto','fill'].includes(l.verticalSizing)||
+            ![null,undefined,'auto','start'].includes(l.alignSelf)||
+            ['topMargin','rightMargin','bottomMargin','leftMargin'].some(k=>num(l[k])!==0)||
+            ['maxWidth','maxHeight','minWidth','minHeight'].some(k=>l[k]!=null);
+        });
+        n.grid={dir:g.dir||'row',padding:[num(g.topPadding),num(g.rightPadding),num(g.bottomPadding),num(g.leftPadding)],
+          columnGap:num(g.columnGap),rowGap:num(g.rowGap),columns:g.columns?.length||0,rows:g.rows?.length||0,unsupportedCells:unsupported};
+        warn(s,'Grid uses measured positions by default. Enable Use native uniform grids in Studio Options to convert compatible cells.');
+      }
       if(s.layoutChild)n.layoutChild={horizontalSizing:s.layoutChild.horizontalSizing,verticalSizing:s.layoutChild.verticalSizing};
       n.children=(s.children || []).map(c=>visit(c,s,depth+1,suppressed||subtree));
       return n;

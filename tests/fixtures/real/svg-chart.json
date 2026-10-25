@@ -1,0 +1,450 @@
+{
+  "format": "penpot-roblox",
+  "version": 4,
+  "source": {
+    "fileId": "real-regression",
+    "pageId": "captured-demo",
+    "rootId": "chart-0"
+  },
+  "design": {
+    "id": "chart-0",
+    "name": "Header chart — three beveled bars",
+    "type": "group",
+    "x": 0,
+    "y": 0,
+    "width": 54,
+    "height": 50,
+    "rotation": 0,
+    "opacity": 1,
+    "visible": true,
+    "clip": false,
+    "radius": 0,
+    "radii": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "shadows": [],
+    "nativeVisual": false,
+    "fills": [],
+    "strokes": [],
+    "constraints": {
+      "horizontal": "left",
+      "vertical": "top"
+    },
+    "rasterSurface": false,
+    "rasterSubtree": false,
+    "visualSuppressed": false,
+    "rasterOpacityBaked": false,
+    "button": false,
+    "nativeGroup": false,
+    "children": [
+      {
+        "id": "chart-1",
+        "name": "base-background",
+        "type": "rectangle",
+        "x": 0,
+        "y": 0,
+        "width": 54,
+        "height": 50,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": false,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": []
+      },
+      {
+        "id": "chart-2",
+        "name": "svg-defs",
+        "type": "svg-raw",
+        "x": 0,
+        "y": 0,
+        "width": 54,
+        "height": 50,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": true,
+        "button": false,
+        "nativeGroup": false,
+        "children": []
+      },
+      {
+        "id": "chart-3",
+        "name": "svg-rect",
+        "type": "rectangle",
+        "x": 1,
+        "y": 27,
+        "width": 15,
+        "height": 21,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 4,
+        "radii": [
+          4,
+          4,
+          4,
+          4
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [],
+        "strokes": [
+          {
+            "strokeColor": "#1a5686",
+            "strokeOpacity": 1,
+            "strokeStyle": null,
+            "strokeWidth": 2,
+            "strokeAlignment": null,
+            "strokeCapStart": null,
+            "strokeCapEnd": null,
+            "strokeColorGradient": null
+          }
+        ],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "assetKey": "fixture:chart-3",
+        "rasterSurface": true,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": true,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "rasterBounds": {
+          "x": -2,
+          "y": -2,
+          "width": 19,
+          "height": 25
+        }
+      },
+      {
+        "id": "chart-4",
+        "name": "svg-rect",
+        "type": "rectangle",
+        "x": 18,
+        "y": 15,
+        "width": 15,
+        "height": 33,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 4,
+        "radii": [
+          4,
+          4,
+          4,
+          4
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [],
+        "strokes": [
+          {
+            "strokeColor": "#865433",
+            "strokeOpacity": 1,
+            "strokeStyle": null,
+            "strokeWidth": 2,
+            "strokeAlignment": null,
+            "strokeCapStart": null,
+            "strokeCapEnd": null,
+            "strokeColorGradient": null
+          }
+        ],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "assetKey": "fixture:chart-4",
+        "rasterSurface": true,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": true,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "rasterBounds": {
+          "x": -2,
+          "y": -2,
+          "width": 19,
+          "height": 37
+        }
+      },
+      {
+        "id": "chart-5",
+        "name": "svg-rect",
+        "type": "rectangle",
+        "x": 35,
+        "y": 2,
+        "width": 17,
+        "height": 46,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 5,
+        "radii": [
+          5,
+          5,
+          5,
+          5
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [],
+        "strokes": [
+          {
+            "strokeColor": "#865433",
+            "strokeOpacity": 1,
+            "strokeStyle": null,
+            "strokeWidth": 2,
+            "strokeAlignment": null,
+            "strokeCapStart": null,
+            "strokeCapEnd": null,
+            "strokeColorGradient": null
+          }
+        ],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "assetKey": "fixture:chart-5",
+        "rasterSurface": true,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": true,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "rasterBounds": {
+          "x": -2,
+          "y": -2,
+          "width": 21,
+          "height": 50
+        }
+      },
+      {
+        "id": "chart-6",
+        "name": "svg-path",
+        "type": "path",
+        "x": 5,
+        "y": 7,
+        "width": 34,
+        "height": 36,
+        "rotation": 0,
+        "opacity": 0.7,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [],
+        "strokes": [
+          {
+            "strokeColor": "#fff6af",
+            "strokeOpacity": 1,
+            "strokeStyle": null,
+            "strokeWidth": 1.6,
+            "strokeAlignment": null,
+            "strokeCapStart": "round",
+            "strokeCapEnd": "round",
+            "strokeColorGradient": null
+          }
+        ],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "assetKey": "fixture:chart-6",
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": true,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "rasterBounds": {
+          "x": -2,
+          "y": -2,
+          "width": 38,
+          "height": 40
+        }
+      },
+      {
+        "id": "chart-7",
+        "name": "svg-path",
+        "type": "path",
+        "x": 3,
+        "y": 48.99999999999999,
+        "width": 50,
+        "height": 0.01,
+        "rotation": 0,
+        "opacity": 0.5,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [],
+        "strokes": [
+          {
+            "strokeColor": "#034895",
+            "strokeOpacity": 1,
+            "strokeStyle": null,
+            "strokeWidth": 2,
+            "strokeAlignment": null,
+            "strokeCapStart": null,
+            "strokeCapEnd": null,
+            "strokeColorGradient": null
+          }
+        ],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "assetKey": "fixture:chart-7",
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": true,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "rasterBounds": {
+          "x": -3,
+          "y": -3,
+          "width": 56,
+          "height": 6.01
+        },
+        "tintColor": "#044895"
+      }
+    ]
+  },
+  "warnings": [],
+  "assets": [
+    {
+      "key": "fixture:chart-3",
+      "shapeId": "chart-3",
+      "name": "svg-rect",
+      "reason": "SVG paint not exposed by Penpot",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    },
+    {
+      "key": "fixture:chart-4",
+      "shapeId": "chart-4",
+      "name": "svg-rect",
+      "reason": "SVG paint not exposed by Penpot",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    },
+    {
+      "key": "fixture:chart-5",
+      "shapeId": "chart-5",
+      "name": "svg-rect",
+      "reason": "SVG paint not exposed by Penpot",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    },
+    {
+      "key": "fixture:chart-6",
+      "shapeId": "chart-6",
+      "name": "svg-path",
+      "reason": "vector",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    },
+    {
+      "key": "fixture:chart-7",
+      "shapeId": "chart-7",
+      "name": "svg-path",
+      "reason": "vector",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    }
+  ],
+  "assetMap": {
+    "fixture:chart-3": "rbxassetid://0",
+    "fixture:chart-4": "rbxassetid://0",
+    "fixture:chart-5": "rbxassetid://0",
+    "fixture:chart-6": "rbxassetid://0",
+    "fixture:chart-7": "rbxassetid://0"
+  },
+  "fontMap": {},
+  "options": {
+    "textMode": "auto",
+    "behaviors": false,
+    "nativeGroups": true,
+    "smoothing": 0,
+    "runtimeThemes": false,
+    "autoTint": true
+  }
+}

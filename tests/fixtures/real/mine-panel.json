@@ -1,0 +1,982 @@
+{
+  "format": "penpot-roblox",
+  "version": 4,
+  "source": {
+    "fileId": "real-regression",
+    "pageId": "captured-demo",
+    "rootId": "mine-0"
+  },
+  "design": {
+    "id": "mine-0",
+    "name": "Forgotten Mine",
+    "type": "board",
+    "x": 0,
+    "y": 0,
+    "width": 660,
+    "height": 150,
+    "rotation": 0,
+    "opacity": 1,
+    "visible": true,
+    "clip": true,
+    "radius": 15,
+    "radii": [
+      15,
+      15,
+      15,
+      15
+    ],
+    "shadows": [],
+    "nativeVisual": false,
+    "fills": [
+      {
+        "fillColor": "#b8dcee",
+        "fillOpacity": null,
+        "fillColorGradient": null
+      }
+    ],
+    "strokes": [
+      {
+        "strokeColor": "#5e9ebe",
+        "strokeOpacity": null,
+        "strokeStyle": "solid",
+        "strokeWidth": 2,
+        "strokeAlignment": "inner",
+        "strokeCapStart": null,
+        "strokeCapEnd": null,
+        "strokeColorGradient": null
+      }
+    ],
+    "constraints": {
+      "horizontal": "left",
+      "vertical": "top"
+    },
+    "rasterSurface": false,
+    "rasterSubtree": false,
+    "visualSuppressed": false,
+    "rasterOpacityBaked": false,
+    "button": false,
+    "nativeGroup": false,
+    "children": [
+      {
+        "id": "mine-1",
+        "name": "Pickaxe",
+        "type": "group",
+        "x": 16,
+        "y": 12,
+        "width": 28,
+        "height": 28,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [
+          {
+            "id": "mine-2",
+            "name": "base-background",
+            "type": "rectangle",
+            "x": 0,
+            "y": 0,
+            "width": 28,
+            "height": 28,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": false,
+            "clip": false,
+            "radius": 0,
+            "radii": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "shadows": [],
+            "nativeVisual": false,
+            "fills": [],
+            "strokes": [],
+            "constraints": {
+              "horizontal": "left",
+              "vertical": "top"
+            },
+            "rasterSurface": false,
+            "rasterSubtree": false,
+            "visualSuppressed": false,
+            "rasterOpacityBaked": false,
+            "button": false,
+            "nativeGroup": false,
+            "children": []
+          },
+          {
+            "id": "mine-3",
+            "name": "svg-path",
+            "type": "path",
+            "x": 7.875,
+            "y": 5.25,
+            "width": 14,
+            "height": 19.25,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "clip": false,
+            "radius": 0,
+            "radii": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "shadows": [],
+            "nativeVisual": false,
+            "fills": [],
+            "strokes": [
+              {
+                "strokeColor": "#8b603b",
+                "strokeOpacity": 1,
+                "strokeStyle": null,
+                "strokeWidth": 5,
+                "strokeAlignment": null,
+                "strokeCapStart": "round",
+                "strokeCapEnd": "round",
+                "strokeColorGradient": null
+              }
+            ],
+            "constraints": {
+              "horizontal": "left",
+              "vertical": "top"
+            },
+            "assetKey": "fixture:mine-3",
+            "rasterSurface": false,
+            "rasterSubtree": false,
+            "visualSuppressed": false,
+            "rasterOpacityBaked": true,
+            "button": false,
+            "nativeGroup": false,
+            "children": [],
+            "rasterBounds": {
+              "x": -7,
+              "y": -7,
+              "width": 28,
+              "height": 33.25
+            }
+          },
+          {
+            "id": "mine-4",
+            "name": "svg-path",
+            "type": "path",
+            "x": 2.625,
+            "y": 3.2629067151735853,
+            "width": 22.75,
+            "height": 10.737093284826415,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "clip": false,
+            "radius": 0,
+            "radii": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "shadows": [],
+            "nativeVisual": false,
+            "fills": [
+              {
+                "fillColor": "#daeef9",
+                "fillOpacity": null,
+                "fillColorGradient": null
+              }
+            ],
+            "strokes": [
+              {
+                "strokeColor": "#48758f",
+                "strokeOpacity": 1,
+                "strokeStyle": null,
+                "strokeWidth": 1.8,
+                "strokeAlignment": null,
+                "strokeCapStart": null,
+                "strokeCapEnd": null,
+                "strokeColorGradient": null
+              }
+            ],
+            "constraints": {
+              "horizontal": "left",
+              "vertical": "top"
+            },
+            "assetKey": "fixture:mine-4",
+            "rasterSurface": false,
+            "rasterSubtree": false,
+            "visualSuppressed": false,
+            "rasterOpacityBaked": true,
+            "button": false,
+            "nativeGroup": false,
+            "children": [],
+            "rasterBounds": {
+              "x": -3,
+              "y": -2.9999067151736085,
+              "width": 28.75,
+              "height": 16.737
+            }
+          }
+        ]
+      },
+      {
+        "id": "mine-5",
+        "name": "Mine title",
+        "type": "text",
+        "x": 55,
+        "y": 10,
+        "width": 370,
+        "height": 34,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#2e6c8f",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "Forgotten Mine",
+          "size": 19,
+          "family": "Fredoka",
+          "robloxFamily": "FredokaOne",
+          "fontSubstituted": true,
+          "weight": 700,
+          "italic": false,
+          "align": "left",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 129.625,
+          "measuredHeight": 23
+        }
+      },
+      {
+        "id": "mine-6",
+        "name": "Best time badge",
+        "type": "rectangle",
+        "x": 461,
+        "y": 11,
+        "width": 183,
+        "height": 35,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 10,
+        "radii": [
+          10,
+          10,
+          10,
+          10
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": null,
+            "fillOpacity": null,
+            "fillColorGradient": {
+              "type": "linear",
+              "startX": 0,
+              "startY": 0,
+              "endX": 0,
+              "endY": 1,
+              "width": 1,
+              "stops": [
+                {
+                  "color": "#ffd67a",
+                  "opacity": null,
+                  "offset": 0
+                },
+                {
+                  "color": "#ffc150",
+                  "opacity": null,
+                  "offset": 1
+                }
+              ]
+            }
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#c99132",
+            "strokeOpacity": null,
+            "strokeStyle": "solid",
+            "strokeWidth": 1.5,
+            "strokeAlignment": "inner",
+            "strokeCapStart": null,
+            "strokeCapEnd": null,
+            "strokeColorGradient": null
+          }
+        ],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "assetKey": "fixture:mine-6",
+        "rasterSurface": true,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": true,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "rasterBounds": {
+          "x": 0,
+          "y": 0,
+          "width": 183,
+          "height": 35
+        }
+      },
+      {
+        "id": "mine-7",
+        "name": "Best time",
+        "type": "text",
+        "x": 467,
+        "y": 15,
+        "width": 171,
+        "height": 27,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#8a5e20",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "Best: 32.0s",
+          "size": 14,
+          "family": "Fredoka",
+          "robloxFamily": "FredokaOne",
+          "fontSubstituted": true,
+          "weight": 700,
+          "italic": false,
+          "align": "center",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 67.8125,
+          "measuredHeight": 17
+        }
+      },
+      {
+        "id": "mine-8",
+        "name": "Runs started inset",
+        "type": "rectangle",
+        "x": 16,
+        "y": 62,
+        "width": 204,
+        "height": 70,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 11,
+        "radii": [
+          11,
+          11,
+          11,
+          11
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#d4ebf6",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#91bed5",
+            "strokeOpacity": null,
+            "strokeStyle": "solid",
+            "strokeWidth": 1.5,
+            "strokeAlignment": "inner",
+            "strokeCapStart": null,
+            "strokeCapEnd": null,
+            "strokeColorGradient": null
+          }
+        ],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": []
+      },
+      {
+        "id": "mine-9",
+        "name": "Runs started value",
+        "type": "text",
+        "x": 20,
+        "y": 65,
+        "width": 196,
+        "height": 35,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#347a9f",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "11",
+          "size": 23,
+          "family": "Fredoka",
+          "robloxFamily": "FredokaOne",
+          "fontSubstituted": true,
+          "weight": 700,
+          "italic": false,
+          "align": "center",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 17.4375,
+          "measuredHeight": 27
+        }
+      },
+      {
+        "id": "mine-10",
+        "name": "Runs started label",
+        "type": "text",
+        "x": 20,
+        "y": 105,
+        "width": 196,
+        "height": 20,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#4e809b",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "Runs started",
+          "size": 11,
+          "family": "Fredoka",
+          "robloxFamily": "FredokaOne",
+          "fontSubstituted": true,
+          "weight": 600,
+          "italic": false,
+          "align": "center",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 63.46875,
+          "measuredHeight": 14
+        }
+      },
+      {
+        "id": "mine-11",
+        "name": "Runs cleared inset",
+        "type": "rectangle",
+        "x": 228,
+        "y": 62,
+        "width": 204,
+        "height": 70,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 11,
+        "radii": [
+          11,
+          11,
+          11,
+          11
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#d4ebf6",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#91bed5",
+            "strokeOpacity": null,
+            "strokeStyle": "solid",
+            "strokeWidth": 1.5,
+            "strokeAlignment": "inner",
+            "strokeCapStart": null,
+            "strokeCapEnd": null,
+            "strokeColorGradient": null
+          }
+        ],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": []
+      },
+      {
+        "id": "mine-12",
+        "name": "Runs cleared value",
+        "type": "text",
+        "x": 232,
+        "y": 65,
+        "width": 196,
+        "height": 35,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#347a9f",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "4",
+          "size": 23,
+          "family": "Fredoka",
+          "robloxFamily": "FredokaOne",
+          "fontSubstituted": true,
+          "weight": 700,
+          "italic": false,
+          "align": "center",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 12.6875,
+          "measuredHeight": 27
+        }
+      },
+      {
+        "id": "mine-13",
+        "name": "Runs cleared label",
+        "type": "text",
+        "x": 232,
+        "y": 105,
+        "width": 196,
+        "height": 20,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#4e809b",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "Runs cleared",
+          "size": 11,
+          "family": "Fredoka",
+          "robloxFamily": "FredokaOne",
+          "fontSubstituted": true,
+          "weight": 600,
+          "italic": false,
+          "align": "center",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 63.90625,
+          "measuredHeight": 14
+        }
+      },
+      {
+        "id": "mine-14",
+        "name": "Bosses defeated inset",
+        "type": "rectangle",
+        "x": 440,
+        "y": 62,
+        "width": 204,
+        "height": 70,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 11,
+        "radii": [
+          11,
+          11,
+          11,
+          11
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#d4ebf6",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#91bed5",
+            "strokeOpacity": null,
+            "strokeStyle": "solid",
+            "strokeWidth": 1.5,
+            "strokeAlignment": "inner",
+            "strokeCapStart": null,
+            "strokeCapEnd": null,
+            "strokeColorGradient": null
+          }
+        ],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": []
+      },
+      {
+        "id": "mine-15",
+        "name": "Bosses defeated value",
+        "type": "text",
+        "x": 444,
+        "y": 65,
+        "width": 196,
+        "height": 35,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#347a9f",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "4",
+          "size": 23,
+          "family": "Fredoka",
+          "robloxFamily": "FredokaOne",
+          "fontSubstituted": true,
+          "weight": 700,
+          "italic": false,
+          "align": "center",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 12.6875,
+          "measuredHeight": 27
+        }
+      },
+      {
+        "id": "mine-16",
+        "name": "Bosses defeated label",
+        "type": "text",
+        "x": 444,
+        "y": 105,
+        "width": 196,
+        "height": 20,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#4e809b",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "Bosses defeated",
+          "size": 11,
+          "family": "Fredoka",
+          "robloxFamily": "FredokaOne",
+          "fontSubstituted": true,
+          "weight": 600,
+          "italic": false,
+          "align": "center",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 81.65625,
+          "measuredHeight": 14
+        }
+      }
+    ]
+  },
+  "warnings": [],
+  "assets": [
+    {
+      "key": "fixture:mine-3",
+      "shapeId": "mine-3",
+      "name": "svg-path",
+      "reason": "vector",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    },
+    {
+      "key": "fixture:mine-4",
+      "shapeId": "mine-4",
+      "name": "svg-path",
+      "reason": "vector",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    },
+    {
+      "key": "fixture:mine-6",
+      "shapeId": "mine-6",
+      "name": "Best time badge",
+      "reason": "gradient geometry",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    }
+  ],
+  "assetMap": {
+    "fixture:mine-3": "rbxassetid://0",
+    "fixture:mine-4": "rbxassetid://0",
+    "fixture:mine-6": "rbxassetid://0"
+  },
+  "fontMap": {},
+  "options": {
+    "textMode": "auto",
+    "behaviors": false,
+    "nativeGroups": true,
+    "smoothing": 0,
+    "runtimeThemes": false,
+    "autoTint": true
+  }
+}

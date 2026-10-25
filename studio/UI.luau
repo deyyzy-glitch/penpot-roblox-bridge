@@ -76,10 +76,35 @@ return function(plugin,Importer,Assets)
  local targetLabel=label(destination,'StarterGui',28,28,16)
  local targetButton=button(destination,'Use selected UI container',64,32,false)
  local hint=label(importPage,'Native UI stays editable. Reimport the same selection to sync changes.',430,50,13,C.muted)
+ local verifyButton=button(importPage,'Verify import',494,42,false)
+ label(importPage,'Checks this received design against its import. Select an imported container to choose a copy. No changes are made.',548,58,12,C.muted)
+ local verifySummary=label(importPage,'Receive a design, then verify its imported objects.',616,64,14,C.muted)
+ local verifyList=create('Frame',importPage,{Name='Verification findings',Position=UDim2.fromOffset(0,694),Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1})
+ create('UIListLayout',verifyList,{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,12)})
+ local verifyWidth
+ local function layoutFindings()
+  local width=math.max(100,verifyList.AbsoluteSize.X-24)
+  for _,row in verifyList:GetChildren()do
+   local detail=row:FindFirstChild('Finding detail')
+   if detail then
+    local bounds=game:GetService('TextService'):GetTextSize(detail.Text,12,Enum.Font.BuilderSans,Vector2.new(width,100000))
+    local height=math.ceil(bounds.Y)+6
+    detail.Size=UDim2.new(1,-24,0,height);row.Size=UDim2.new(1,0,0,64+height)
+   end
+  end
+ end
+ verifyList:GetPropertyChangedSignal('AbsoluteSize'):Connect(function()
+  local width=verifyList.AbsoluteSize.X;if width~=verifyWidth then verifyWidth=width;layoutFindings()end
+ end)
  local reviewSummary=label(reviewPage,'Load a design to see its changes.',0,58,19)
  local changeList=label(reviewPage,'',74,10,13,C.text);changeList.AutomaticSize=Enum.AutomaticSize.Y;changeList.TextYAlignment=Enum.TextYAlignment.Top
- local options={responsive=false,hideRemoved=false,force=false,allowClassChanges=false}
+ local options={responsive=false,hideRemoved=false,force=false,allowClassChanges=false,nativeGrids=false}
  local previewPlan,document,token,target=nil,nil,nil,game:GetService('StarterGui')
+ local lastImported,lastVerification
+ local function clearVerification()
+  for _,i in verifyList:GetChildren()do if i:IsA('Frame')then i:Destroy()end end
+  lastVerification=nil;verifySummary.Text=document and 'Click Verify import to check the matching imported design.'or 'Receive a design, then verify its imported objects.';verifySummary.TextColor3=C.muted
+ end
  local optionY=0
  local function option(key,titleText,description)
   local inner=card(settingsPage,optionY,104);local b=button(inner,titleText,0,32,false);local desc=label(inner,description,42,40,12,C.muted)
@@ -88,6 +113,7 @@ return function(plugin,Importer,Assets)
   optionY+=116
  end
  option('hideRemoved','Hide removed elements','Removed objects are retained so references and scripts stay intact.')
+ option('nativeGrids','Use native uniform grids','Off by default. Compatible Penpot grids become UIGridLayout; irregular grids keep measured positions. Layout controls slot sizes and positions.')
  option('force','Use design values','Overwrite local appearance changes. Explicit P2R_Locks still win.')
  option('allowClassChanges','Allow object type changes','Keep the old object and create its new type. Review references afterward.')
  local advanced=button(settingsPage,'Advanced JSON & mappings',optionY,38,false)
@@ -123,7 +149,7 @@ return function(plugin,Importer,Assets)
  checkHelper.MouseButton1Click:Connect(function()guard(checkConnection)end)
  local function loadDocument(value)
   local d=type(value)=='string' and Http:JSONDecode(value) or value
-  Importer.validate(d);document=d;previewPlan=nil
+  Importer.validate(d);document=d;previewPlan=nil;lastImported=nil;clearVerification()
   if Assets then Assets.pending(d,plugin,Importer)end
   local count=0;local function walk(n)count+=1;for _,c in ipairs(n.children)do walk(c)end end;walk(d.design)
   sourceTitle.Text=d.design.name;sourceMeta.Text=string.format('%d elements  ·  %d image surfaces\n%d × %d design pixels',count,#(d.assets or {}),d.design.width,d.design.height)
@@ -162,9 +188,40 @@ return function(plugin,Importer,Assets)
   if Assets then Assets.upload(document,plugin,token,function(index,total,name)show(string.format('Uploading image %d of %d: %s',index,total,name))end,Importer)end
   latest=Importer.prepare(document,target,table.clone(options))
   local imported=Importer.apply(latest,function(done,total)show(string.format('Building native UI… %d / %d',done,total))end)
+  lastImported=imported;clearVerification();verifySummary.Text='Import complete. Click Verify import to check it.'
   Selection:Set({imported});previewPlan=nil;primary.Text='Review import';showTab('Design');show('Imported successfully. Re-export this design to sync changes.');connection.Text=token and '●  Local helper · used for this import' or '●  Bundle imported';connection.TextColor3=C.green
   return imported
  end
+ local function selectFinding(finding)
+  local i=finding and finding.instance
+  if i and i.Parent then Selection:Set({i});show('Selected '..i:GetFullName())else show('The object is no longer available. Verify again.',true)end
+ end
+ local function verifyClick()
+  assert(document,'Receive the same design from Penpot or open its bundle before verifying.')
+  show('Checking imported objects…');clearVerification()
+  local key=document.source.fileId..'/'..document.source.rootId
+  local selected=Selection:Get()[1];local auditTarget
+  while selected do if selected:GetAttribute('P2R_Design')==key then auditTarget=selected;break end;selected=selected.Parent end
+  if not auditTarget then auditTarget=lastImported and lastImported.Parent and lastImported or target end
+  local report=Importer.verify(document,auditTarget,table.clone(options));lastVerification=report
+  verifySummary.Text=string.format('%d issues · %d warnings · %d notes\n%d checks. Visual review is still needed.',report.errors,report.warnings,report.notes,report.checks)
+  verifySummary.TextColor3=report.errors>0 and C.amber or report.warnings>0 and C.amber or C.green
+  local colors={error=C.amber,warning=C.amber,note=C.muted}
+  for ix,finding in report.issues do
+   if ix>150 then break end
+   local row=create('Frame',verifyList,{Name='Finding',LayoutOrder=ix,Size=UDim2.new(1,0,0,100),BackgroundColor3=C.card,BorderSizePixel=0});round(row,10)
+   local pick=button(row,string.upper(finding.level)..' · '..finding.name,0,44,false);pick.TextColor3=colors[finding.level];pick.TextSize=12
+   local detail=label(row,finding.message,52,40,12,C.muted);detail.Name='Finding detail';detail.Size=UDim2.new(1,-24,0,40);detail.Position=UDim2.fromOffset(12,52);detail.TextYAlignment=Enum.TextYAlignment.Top
+   pick.MouseButton1Click:Connect(function()selectFinding(finding)end)
+  end
+  if #report.issues>150 or report.omitted>0 then
+   local row=create('Frame',verifyList,{Name='More findings',LayoutOrder=151,Size=UDim2.new(1,0,0,54),BackgroundTransparency=1})
+   label(row,'Showing the first 150 findings. Resolve these and verify again for remaining findings.',0,54,12,C.muted)
+  end
+  showTab('Design');layoutFindings();body.CanvasPosition=Vector2.new(0,490);show('Verification finished. Click a finding to select its object. Nothing was modified.')
+  return report
+ end
+ verifyButton.MouseButton1Click:Connect(function()guard(verifyClick)end)
  receive.MouseButton1Click:Connect(function()guard(function()
   assert(Assets,'Assets module is missing');show('Connecting to this PC. Allow 127.0.0.1 if Roblox asks.');token=Assets.connect();connection.Text='●  Local helper · running';connection.TextColor3=C.green
   local response=Http:RequestAsync({Url='http://127.0.0.1:43129/document',Method='GET',Headers={Authorization='Bearer '..token}})
@@ -181,5 +238,5 @@ return function(plugin,Importer,Assets)
  local initialTab=plugin:GetSetting('SetupSeen_v2') and 'Design' or 'Setup'
  showTab(initialTab)
  if initialTab=='Setup' then primary.Text='Check connection & continue' end
- return {widget=widget,loadDocument=loadDocument,checkConnection=checkConnection,preview=function()guard(previewClick)end,apply=function()local imported;guard(function()imported=applyClick()end);return imported end,receive=function()token=Assets.connect();return token end,controls={status=status,primary=primary,document=json,helperState=helperState,connection=connection},getTarget=function()return target end,getDocument=function()return document end}
+ return {widget=widget,loadDocument=loadDocument,checkConnection=checkConnection,preview=function()guard(previewClick)end,verify=function()local report;guard(function()report=verifyClick()end);return report end,getVerification=function()return lastVerification end,selectFinding=function(index)selectFinding(lastVerification and lastVerification.issues[index])end,apply=function()local imported;guard(function()imported=applyClick()end);return imported end,receive=function()token=Assets.connect();return token end,controls={status=status,primary=primary,document=json,helperState=helperState,connection=connection,verify=verifyButton,verifySummary=verifySummary,verifyList=verifyList},getTarget=function()return target end,getDocument=function()return document end}
 end

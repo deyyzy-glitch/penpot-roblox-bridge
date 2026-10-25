@@ -15,11 +15,27 @@ If Roblox asks to contact **127.0.0.1**, it is asking to contact the helper on y
 
 The Windows download is a portable application, not an installer or a tray app. It does not automatically start at login. Run its launcher again after restarting your computer. Each person runs their own helper and uses their own Roblox credentials. No developer key is bundled.
 
-## Updating to 2.4.2
+## Updating to 2.5.0
 
-This update adds direct preparation of individual layers without grouping them first. The Studio plugin remains compatible at 2.4.1. Download the latest helper ZIP. Close the old helper, extract the entire new ZIP, and run its launcher. Restart Studio and reopen the Penpot companion. If token export lacks permission, update or reinstall **Penpot to Roblox** from `http://127.0.0.1:43129/manifest.json` and approve library read access. Enter your own image upload key locally after a helper restart if needed.
+Update the Studio plugin for Verify import and the optional native-grid toggle. Download the latest helper ZIP and prepare the design again to include Penpot grid metadata. Native grids are off by default. Close the old helper, extract the entire new ZIP, and run its launcher. Restart Studio and reopen the Penpot companion. If token export lacks permission, update or reinstall **Penpot to Roblox** from `http://127.0.0.1:43129/manifest.json` and approve library read access. Enter your own image upload key locally after a helper restart if needed.
 
 Preparation now shows each layer's progress and times out stalled requests. Eligible self-contained artwork renders locally from SVG instead of depending on Penpot's remote image renderer. Empty SVG definitions are omitted from uploads, imported SVG paints are retained, and Fredoka/Nunito Sans can stay editable using reported Roblox font substitutions. Native text outlines follow the glyphs. See [release notes](RELEASE-NOTES.md) for validation and limitations.
+
+## Verify import
+
+The Studio plugin's Design tab includes **Verify import**. Receive the same design or open its uploaded bundle first, select an imported container if there are several copies, then click Verify import. The received design stays available for the current plugin session; receive it again after restarting Studio. Verification compares that export, not unsent edits still in Penpot.
+
+Findings check imported identities, classes, parenting, engine-normalized properties (including fonts and image references), visible text fitting, image loading, and new overlaps between previously separate siblings. Click a finding to select the affected object or the nearest available imported parent. Verification does not change or repair the imported UI. Local changes and locks are informational; missing image references remain errors. Declared font substitutions are notes, not proof of identical glyph appearance.
+
+This is programmed verification and needs no AI account. It does not compare screenshots, prove pixel-perfect fidelity, or establish whether a not-yet-loaded image is permanently unavailable. Hidden text is skipped. New-overlap checks exclude intentional design overlaps, rotated groups and scrolling regions, and stop after 10,000 sibling pairs. The panel shows the first 150 findings; resolve those and verify again for further findings.
+
+## Native uniform grids
+
+**Options → Use native uniform grids** is off by default. Prepare the design using the updated Penpot companion so its native grid metadata is included, then enable this option in Studio and review the import. Compatible Penpot grids become `UIGridLayout` plus `UIPadding`, with fixed pixel cell sizes, gaps, row/column flow and spatial ordering. The toggle does not guess grids from arbitrary groups of rectangles. Re-exporting is unnecessary when toggling an already-received design that includes grid metadata.
+
+Only equal-size, visible, unrotated, fixed-size cells in a contiguous top-left grid are eligible. Spans, empty intermediate cells, offsets, absolute children, dynamic sizing, margins, complex container effects and irregular placement keep measured positions, with an explanation in Review. Cell content can still contain text, icons and image surfaces. Native layout controls direct child sizes and positions, including slots added locally; it is an editing convenience rather than a promise of better visual fidelity. Narrower containers can wrap cells differently.
+
+Turning the option off and reimporting restores measured placement. Removed grid components are retained outside the rendered hierarchy, preserving slot instances and references. The verifier uses the same option as import. Existing bundles without grid metadata continue importing with measured positions.
 
 ## Automatic images
 
