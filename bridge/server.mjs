@@ -28,7 +28,7 @@ export function createBridge({token=crypto.randomBytes(24).toString('hex'),stora
    // Same-origin browser isolation + loopback Host validation; no credentials are sent to Penpot's parent frame.
    if(url.pathname==='/session'){if(!sameOrigin)return reply(403,{error:'Origin rejected'});return reply(200,{token,version:2})}
    if(url.pathname==='/setup'&&req.method==='GET'){res.setHeader('Content-Security-Policy',"frame-ancestors 'none'");return reply(200,await readFile(path.join(project,'bridge','setup.html')),'text/html')}
-   const staticFiles={'/manifest.json':['manifest.json','application/json'],'/plugin.js':['plugin.js','text/javascript'],'/ui.html':['ui.html','text/html'],'/ui.js':['ui.js','text/javascript'],'/corners.js':['corners.js','text/javascript'],'/image-editor.js':['image-editor.js','text/javascript'],'/layer-editor.js':['layer-editor.js','text/javascript']};
+   const staticFiles={'/manifest.json':['manifest.json','application/json'],'/plugin.js':['plugin.js','text/javascript'],'/ui.html':['ui.html','text/html'],'/ui.js':['ui.js','text/javascript'],'/ui.css':['ui.css','text/css'],'/shell.js':['shell.js','text/javascript'],'/corners.js':['corners.js','text/javascript'],'/image-editor.js':['image-editor.js','text/javascript'],'/layer-editor.js':['layer-editor.js','text/javascript']};
    if(staticFiles[url.pathname]&&req.method==='GET'){
     const [file,type]=staticFiles[url.pathname];res.setHeader('Access-Control-Allow-Origin','*');
     return reply(200,await readFile(path.join(root,file)),type);

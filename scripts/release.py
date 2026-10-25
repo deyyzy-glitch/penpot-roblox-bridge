@@ -13,7 +13,7 @@ def files():
         rel=p.relative_to(ROOT)
         if not p.is_file() or any(part in {'.git','.asset-cache','node_modules','__pycache__','dist','runtime'} for part in rel.parts):continue
         if len(rel.parts)==1 and rel.name in ROOT_FILES:yield p,rel
-        elif rel.parts[0] in FOLDERS and p.suffix in {'.js','.mjs','.luau','.html','.py','.yml','.md','.json'}:yield p,rel
+        elif rel.parts[0] in FOLDERS and p.suffix in {'.js','.mjs','.luau','.html','.css','.py','.yml','.md','.json'}:yield p,rel
 
 def checked_windows_runtime():
     base='https://nodejs.org/dist/latest-v24.x/'

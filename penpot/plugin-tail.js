@@ -1,4 +1,4 @@
-penpot.ui.open('Penpot Bridge', 'http://127.0.0.1:43129/ui.html', {width:440,height:610});
+penpot.ui.open('Penpot Bridge', 'http://127.0.0.1:43129/ui.html', {width:640,height:700});
 let lastBundle,lastRequestId;
 penpot.ui.onMessage(async message => {
   const requestId=message?.requestId;

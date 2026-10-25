@@ -14,7 +14,7 @@ function editor(saved=null){
 }
 test('layer choices persist per file, use literal names and reset cleanly to Auto',()=>{
  const e=editor();e.load();const row=e.get('layer-list').children[0];assert.equal(row.children[0].textContent,'Upgrade <button>');
- const mode=row.children[2].children[0],ref=row.children[3],template=row.children[4];mode.value='template';mode.onchange();template.value='PrimaryButton';ref.value='UpgradeButton';ref.onchange();
+ const mode=row.children[2].children[0],ref=row.children[3],template=row.children[4];mode.value='template';mode.onchange();template.value='PrimaryButton';ref.value='UpgradeButton';ref.oninput();
  assert.equal(e.dirty(),2);assert.equal(e.api.options().layerRules['file:button'].template,'PrimaryButton');
  const reload=editor(e.stored.get('penpot-bridge-layer-rules-v1'));reload.load();assert.equal(reload.get('layer-list').children[0].children[3].value,'UpgradeButton');
  reload.load('other-file');assert.equal(reload.get('layer-list').children[0].children[3].value,'');

@@ -8,14 +8,20 @@ Import Penpot layers, groups, and boards into Roblox Studio UI, review changes, 
 2. [Download the desktop helper](https://github.com/deyyzy-glitch/penpot-roblox-bridge/releases/latest/download/PenpotBridge-Windows-x64.zip). Extract the entire ZIP, then double-click **Start-Penpot-Bridge.cmd**. Node.js is bundled; no separate installation is needed.
 3. Keep its **Penpot Bridge** window open while importing. The setup page opens in your browser and shows whether image uploads are ready.
 4. In Penpot's Plugin Manager, add `http://127.0.0.1:43129/manifest.json` and open **Penpot to Roblox**.
-5. Select one layer, group, or board. Click **Prepare selected design**, then **Send to Studio**.
+5. Select one layer, group, or board. Click **Prepare selection**, then **Send to Studio**.
 6. In Studio, open **Plugins → Penpot Bridge**, choose **Receive from Penpot**, **Review import**, then **Import design**.
 
 If Roblox asks to contact **127.0.0.1**, it is asking to contact the helper on your own PC. Allow that connection to transfer designs. Your finished game does not need the helper.
 
 The Windows download is a portable application, not an installer or a tray app. It does not automatically start at login. Run its launcher again after restarting your computer. Each person runs their own helper and uses their own Roblox credentials. No developer key is bundled.
 
-## Updating to 2.6.0
+## Updating to 2.7.0
+
+Update the Studio plugin and download the latest portable helper for the redesigned interfaces. Both companions now have **Settings → Appearance → Dark / Light** with blue accents and a locally saved preference. Studio separates Import, Review, Verify, Templates, Settings, and Connection; narrow panels use a compact sidebar and wrapping settings rows. The permanent bottom status strip is removed.
+
+Close the old helper before running the new download, then reopen Penpot to Roblox in Penpot. Existing bundles and conversion behavior remain supported. This download does not automatically replace a helper already running on your PC.
+
+## Previous update: 2.6.0
 
 Update the Studio plugin for improved native linear-gradient colors, gameplay references, and reusable UI templates. Download the latest helper for the optional per-layer controls, then reopen the Penpot companion and prepare again. Layer overrides use document version 5 and require the 2.6 Studio plugin and helper; existing version 1–4 bundles remain supported. Gradient improvements also apply to old bundles when reimported with the updated Studio plugin.
 
@@ -23,13 +29,13 @@ Close the old helper before starting the new one. Extract the complete ZIP and r
 
 ## Layer controls, references and templates
 
-In Penpot, expand **Layer controls (optional)** and click **Read selected design layers**. Search for a layer, then choose Auto, Native, Image, Layout only, Skip subtree, or Reusable template. Choices are saved in browser storage per Penpot file and source layer ID; changing a choice requires preparing again. They do not modify the design or automatically transfer to another person's browser.
+In Penpot, open **Layers** and click **Read selection layers**. Search for a layer, then choose Auto, Native, Image, Layout only, Skip subtree, or Reusable template. Choices are saved in browser storage per Penpot file and source layer ID; changing a choice requires preparing again. They do not modify the design or automatically transfer to another person's browser.
 
 - **Auto** keeps the normal fidelity policy. **Native** requests editable conversion and rejects geometry/effects that cannot be preserved; font substitutions remain reported. **Image** flattens that layer's visual subtree, retaining covered descendant geometry and controls.
 - **Layout only** omits the layer's own appearance and retains child content. **Skip subtree** omits the layer and descendants; previous imported instances are hidden and retained even with Hide removed disabled.
 - **Reusable template** replaces the source subtree with a clone of a mapped Roblox GuiObject. It takes placement, size, visibility, rotation and ordering from the design; appearance, children and scripts come from the template.
 
-An optional gameplay reference such as `UpgradeButton` generates **Penpot References** under the imported wrapper. Alternatively enable **Options → Generate gameplay references** for source-ID lookup without named aliases. Use a LocalScript in your game:
+An optional gameplay reference such as `UpgradeButton` generates **Penpot References** under the imported wrapper. Alternatively enable **Settings → Gameplay references** for source-ID lookup without named aliases. Use a LocalScript in your game:
 
 ```luau
 local wrapper = script.Parent
@@ -43,7 +49,7 @@ end)
 
 References use source IDs and survive renames and moves inside the wrapper. Rebind after an approved class/template replacement to obtain the new instance. Missing or duplicate identities produce explicit results/errors; this module does not write gameplay logic.
 
-In Studio, select your existing template GuiObject in Explorer, open **Options → Reusable UI templates**, enter a key such as `PrimaryButton`, and click **Map / refresh selected UI template**. Use the same key in Penpot. Mappings are stored in this place's ServerStorage registry, not on GitHub or in your helper. Clones preserve your template children and scripts and remove copied importer ownership attributes. Only use templates whose scripts you intend to run in the finished game. Mapping again refreshes its revision; existing clones are replaced only after reviewing and enabling **Allow object / template replacement**. Previous instances remain retained, with retired template scripts disabled to avoid duplicate execution. Ordinary reimports preserve clone identity and local edits.
+In Studio, select your existing template GuiObject in Explorer, open **Templates**, enter a key such as `PrimaryButton`, and click **Map selected component**. Use the same key in Penpot. Mappings are stored in this place's ServerStorage registry, not on GitHub or in your helper. Clones preserve your template children and scripts and remove copied importer ownership attributes. Only use templates whose scripts you intend to run in the finished game. Mapping again refreshes its revision; existing clones are replaced only after reviewing and enabling **Allow object replacement**. Previous instances remain retained, with retired template scripts disabled to avoid duplicate execution. Ordinary reimports preserve clone identity and local edits.
 
 ## Native linear-gradient colors
 
@@ -67,7 +73,7 @@ This is programmed verification and needs no AI account. It does not compare scr
 
 ## Native uniform grids
 
-**Options → Use native uniform grids** is off by default. Prepare the design using the updated Penpot companion so its native grid metadata is included, then enable this option in Studio and review the import. Compatible Penpot grids become `UIGridLayout` plus `UIPadding`, with fixed pixel cell sizes, gaps, row/column flow and spatial ordering. The toggle does not guess grids from arbitrary groups of rectangles. Re-exporting is unnecessary when toggling an already-received design that includes grid metadata.
+**Settings → Native uniform grids** is off by default. Prepare the design using the updated Penpot companion so its native grid metadata is included, then enable this option in Studio and review the import. Compatible Penpot grids become `UIGridLayout` plus `UIPadding`, with fixed pixel cell sizes, gaps, row/column flow and spatial ordering. The toggle does not guess grids from arbitrary groups of rectangles. Re-exporting is unnecessary when toggling an already-received design that includes grid metadata.
 
 Only equal-size, visible, unrotated, fixed-size cells in a contiguous top-left grid are eligible. Spans, empty intermediate cells, offsets, absolute children, dynamic sizing, margins, complex container effects and irregular placement keep measured positions, with an explanation in Review. Cell content can still contain text, icons and image surfaces. Native layout controls direct child sizes and positions, including slots added locally; it is an editing convenience rather than a promise of better visual fidelity. Narrower containers can wrap cells differently.
 

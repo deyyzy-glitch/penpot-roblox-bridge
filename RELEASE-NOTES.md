@@ -1,3 +1,12 @@
+# Penpot Bridge 2.7.0
+
+- Added blue-accented Dark and Light appearance choices in Settings in both companions. Each saves its preference locally and leaves imported design colors unchanged.
+
+- Redesigned the Penpot and Studio companions with a shared blue-accented appearance, rounded controls, and separate workflow pages.
+- Studio uses a compact sidebar in narrow windows, wraps descriptions, grows settings rows, and insets card borders to avoid clipping. Removed the permanent bottom status strip; actions belong to their pages, progress appears in the header, and errors are dismissible.
+- Penpot separates Transfer, Layers, Images, Settings, and Connection. Reference edits invalidate prepared transfers immediately.
+- Validation: 51 Node tests, 10 Studio workflow checks, and 16 Studio layout checks at 360×420, 440×520, 680×740, and 940×760. Browser fixture checks covered preparation, transfer, persisted layer choices, and invalidation after editing. Theme switching and preference persistence were also checked in both companions. Update the Studio plugin and portable helper to receive the redesigned interfaces.
+
 # Penpot Bridge 2.6.0
 
 - Added optional per-layer Auto, Native, Image, Layout only, Skip subtree and Reusable template controls in the Penpot companion. Choices persist locally per file/layer; preparing again applies them. Native mode rejects unsupported fidelity instead of silently discarding effects. Explicit skips hide and retain old imports.

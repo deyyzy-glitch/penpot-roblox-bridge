@@ -22,7 +22,7 @@ globalThis.P2RLayerEditor=(()=>{
     const ref=make('input',{value:rule.ref||'',placeholder:'Gameplay reference, e.g. UpgradeButton',maxLength:64,disabled:busy,ariaLabel:'Gameplay reference for '+layer.name});row.appendChild(ref);
     const template=make('input',{value:rule.template||'',placeholder:'Template key mapped in Studio',maxLength:64,disabled:busy,ariaLabel:'Reusable template for '+layer.name});template.hidden=rule.mode!=='template';row.appendChild(template);
     const update=()=>{const next={mode:mode.value,ref:ref.value.trim()};if(next.mode==='template')next.template=template.value.trim();template.hidden=next.mode!=='template';save(key,next)};
-    mode.onchange=update;ref.onchange=update;template.onchange=update;root.appendChild(row);
+    mode.onchange=update;ref.oninput=update;ref.onchange=update;template.oninput=update;template.onchange=update;root.appendChild(row);
    }
    if(matches.length>100)root.appendChild(make('p',{textContent:'Showing 100 of '+matches.length+' layers. Search to narrow the list.'}));
    if(!layers.length)root.appendChild(make('p',{textContent:'Read the selected design to choose individual layer modes.'}));
