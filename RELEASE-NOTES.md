@@ -1,3 +1,12 @@
+# Penpot Bridge 2.7.3 — friendly duplicate launches
+
+- Opening a second helper now identifies the running Penpot Bridge, opens its existing status page, and explains that the original helper remains running. There is no unhandled EADDRINUSE crash.
+- Older helpers are identified using their public manifest without reading credentials. The duplicate window explains how to switch downloads: close the original helper first, then launch the new copy.
+- An unrelated application occupying the port gets a clear error and is not stopped or opened. Added a minimal health response containing only app identity and version.
+- Launcher wording distinguishes a duplicate launch from a stopped helper. All 58 Node tests pass, including normal startup, duplicate launch, retained prepared data, older-helper recognition, and unrelated port occupancy.
+
+This is a helper-only update. The Studio plugin remains 2.7.1.
+
 # Penpot Bridge 2.7.2 — helper setup clarity
 
 - Separated required local-helper connection from optional Roblox image-upload authorization. The setup page now shows design-transfer readiness first and keeps the key form inside a closed optional image-upload section.

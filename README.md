@@ -26,7 +26,11 @@ If Roblox asks to contact **127.0.0.1**, it is asking to contact the helper on y
 
 The Windows download is a portable application, not an installer or a tray app. It does not automatically start at login. Run its launcher again after restarting your computer. Each person runs their own helper. Only creators uploading new images through it need to configure their own Roblox key. No developer key is bundled.
 
-## Updating to 2.7.2
+## Updating to 2.7.3
+
+Only one helper can use the local connection port at a time. Launching this version twice opens the existing helper's status page and tells you which copy is already running, without starting another. You can close the duplicate launcher window. To switch versions, close the original helper first, then run the new download. The helper never stops another process automatically.
+
+## Previous helper update: 2.7.2
 
 The latest helper separates **Design transfer — no key required** from **New image uploads — optional setup**. Download the latest Windows helper, close the old copy, and launch the newly extracted copy. The Studio plugin remains the working 2.7.1 build; this patch changes helper guidance, not conversion behavior.
 
@@ -192,7 +196,7 @@ Reimport the same source board to update compatible instances. Local managed-pro
 | Penpot: “The plugin doesn't exist or the URL is not correct” | Start the helper first. Confirm the status page opens, then install using `http://127.0.0.1:43129/manifest.json`. This local URL only works while the helper runs on that PC. |
 | It worked yesterday, but fails after restarting the PC | Run the helper launcher again. The portable helper does not automatically start at login. |
 | Launcher says “The bundled runtime is missing” | Extract the **entire** Windows helper ZIP. Run the launcher from the extracted folder, not from inside the ZIP or copied out on its own. |
-| Launcher says the address is already in use | Another helper may already be running. Check the status page before opening more copies. When updating, close the old helper and run the new one. |
+| Launcher says the address is already in use | A helper may already be running, including a background copy. In 2.7.3, another launch identifies it and opens its status page instead of crashing. Close the duplicate window and continue with the running helper. To update, close the original helper before running the new download. |
 | Studio says the helper is offline, but its status page opens | Use **Connection → Check local connection** in Studio. If you denied the request to contact `127.0.0.1`, review Penpot Bridge's HTTP permission in Manage Plugins and allow it. This address means your own PC. |
 | Studio has nothing to receive | In Penpot, select the layer, group, or board, click **Prepare selection**, then **Send to Studio**. In Studio, click **Receive from Penpot**. Preparing alone does not send it. |
 | Images need setup, or uploads stopped after restarting the helper | Open the setup page and configure your own Roblox Assets Read/Write key locally. Keys are kept in helper memory and cleared when it stops. Check account/group and asset permissions if Roblox rejects an upload. |

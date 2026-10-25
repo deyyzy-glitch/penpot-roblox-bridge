@@ -11,6 +11,13 @@ if not exist "%~dp0runtime\node.exe" (
   exit /b 1
 )
 "%~dp0runtime\node.exe" "%~dp0bridge\server.mjs" --open
+if "%errorlevel%"=="10" (
+  echo.
+  echo This was a duplicate launch. The original helper is still running.
+  echo Close this window and continue in Penpot or Studio.
+  pause
+  exit /b 0
+)
 echo.
-echo The helper stopped. If the address was already in use, another copy may be running.
+echo The helper stopped. See the message above for details.
 pause
