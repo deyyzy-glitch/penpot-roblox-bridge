@@ -6,6 +6,32 @@ const context={};vm.createContext(context);for(const f of ['corners.js','tokens.
 const shape=(id,type='rectangle',extra={})=>({id,name:id,type,width:100,height:50,center:{x:50,y:25},opacity:1,children:[],fills:[{fillColor:'#85B5FF'}],strokes:[],...extra});
 const api=root=>({currentFile:{id:'file'},currentPage:{id:'page'},selection:[root]});
 const exportDoc=(root,rules={},options={})=>context.P2R.exportSelection(api(root),[root],{tokens:false,layerRules:Object.fromEntries(Object.entries(rules).map(([id,r])=>['file:'+id,r])),...options}).document;
+
+const textLayer=()=>shape('stats','text',{characters:'0.58s | Luck 2.5',fontFamily:'Nunito',fontSize:9,fontWeight:700,textBounds:{width:65.03125,height:12}});
+test('explicit native font weights preserve the Penpot source and clear back to its original weight',()=>{
+ const s=textLayer(),before=JSON.stringify(s);const original=exportDoc(s);assert.equal(original.design.text.weight,700);assert.equal(original.design.text.weightOverride,undefined);
+ const d=exportDoc(s,{stats:{fontWeight:800}});assert.equal(d.design.text.weight,800);assert.equal(d.design.text.sourceWeight,700);assert.equal(d.assets.length,0);assert.equal(d.version,5);assert.match(d.warnings.join(' '),/Explicit native font weight/);
+ assert.equal(JSON.stringify(s),before);assert.equal(exportDoc(s).design.text.weight,700);
+ assert.equal(exportDoc(s,{}, {layerRules:{'other:stats':{fontWeight:900}}}).design.text.weight,700);
+ assert.equal(context.P2R.describeSelection(api(s)).layers[0].sourceWeight,700);
+});
+
+test('weight choices cover RichText runs and take precedence over font-weight tokens',async()=>{
+ const {mixedText}=await import('./studio-advanced-fixture.mjs');const s=mixedText();s.id='stats';s.tokens={fontWeight:'weight.body',fill:'text.color'};
+ const before=JSON.stringify(s),source=exportDoc(s),d=exportDoc(s,{stats:{fontWeight:800}},{tokens:true});
+ assert.ok(d.design.text.runs.length>1);for(let i=0;i<d.design.text.runs.length;i++){assert.equal(d.design.text.runs[i].weight,800);assert.equal(d.design.text.runs[i].sourceWeight,source.design.text.runs[i].weight)}
+ assert.equal(d.design.tokens.fontWeight,undefined);assert.equal(d.design.tokens.fill,'text.color');assert.match(d.warnings.join(' '),/token binding skipped/);assert.equal(JSON.stringify(s),before);
+});
+
+test('image and covered text retain their original appearance despite a saved weight choice',()=>{
+ const d=exportDoc(textLayer(),{stats:{mode:'image',fontWeight:800}});assert.equal(d.design.text.weight,700);assert.equal(d.design.text.weightOverride,undefined);assert.equal(d.assets.length,1);assert.match(d.warnings.join(' '),/override is inactive/);
+ const root=shape('root','group',{children:[textLayer()]});const covered=exportDoc(root,{root:{mode:'image'},stats:{fontWeight:800}});assert.equal(covered.design.children[0].text.weight,700);assert.equal(covered.design.children[0].visualSuppressed,true);
+});
+
+test('invalid weights and rules on non-text layers fail before export',()=>{
+ for(const fontWeight of [0,99,150,1000,'800',NaN])assert.throws(()=>exportDoc(textLayer(),{stats:{fontWeight}}),/font weight override/);
+ assert.throws(()=>exportDoc(shape('panel'),{panel:{fontWeight:800}}),/text layer/);
+});
 test('layer listing is read-only and export overrides are scoped to the source file',()=>{
  const root=shape('root','board',{children:[shape('child')]});const before=JSON.stringify(root);
  const list=context.P2R.describeSelection(api(root));assert.equal(list.layers[1].depth,1);assert.equal(list.fileId,'file');assert.equal(JSON.stringify(root),before);

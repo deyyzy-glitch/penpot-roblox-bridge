@@ -1,3 +1,11 @@
+# Penpot Bridge 2.7.5 — per-layer native text weights
+
+- Text layers in Penpot's Layers page have a Font weight selector. From Penpot remains the default; optional weights from 100 to 900 apply to editable native text and all runs in that layer. Choices persist per file/layer and invalidate prepared transfers.
+- Image conversions preserve original Penpot artwork. Their saved native weight choice stays inactive, and the control remains disabled after busy work. Explicit native weights retain source-weight metadata and override only the font-weight token binding.
+- Validated with 71 Node tests, browser persistence/mode/reset checks, and seven live Studio checks using the published 2.7.4 importer. No new Studio plugin API is required for this feature.
+
+Update the helper, then close and reopen Penpot Bridge in Penpot. Open Layers → Read selection layers and choose a text layer's Font weight. Prepare and send again, then receive and import in Studio. The public Studio plugin remains 2.7.4; a new plugin installation is not required for this helper update.
+
 # Penpot Bridge 2.7.4 — clean backgrounds and aligned icons
 
 - Background-only surfaces explicitly remove descendant SVG wrappers before rendering. Some Penpot export paths include those children despite `skipChildren`, causing editable labels and icons to appear twice. Whole-subtree image conversions retain their original behavior; unknown SVG structure fails explicitly.

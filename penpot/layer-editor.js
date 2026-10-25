@@ -1,12 +1,13 @@
 globalThis.P2RLayerEditor=(()=>{
  const modes={auto:'Auto',native:'Native',image:'Image',layout:'Layout only',skip:'Skip subtree',template:'Reusable template'};
+ const weights={100:'Thin',200:'Extra Light',300:'Light',400:'Regular',500:'Medium',600:'SemiBold',700:'Bold',800:'ExtraBold',900:'Heavy'};
  const storageKey='penpot-bridge-layer-rules-v1';
  function create({post,invalidate,status}){
   const el=id=>document.getElementById(id);let rules={},layers=[],fileId='',request=0,activeRequest,busy=false;
   try{const saved=JSON.parse(localStorage.getItem(storageKey)||'{}');if(saved&&typeof saved==='object'&&!Array.isArray(saved))rules=saved}catch{}
   const make=(tag,props={})=>Object.assign(document.createElement(tag),props);
   function save(key,rule){
-   if(rule.mode==='auto'&&!rule.ref)delete rules[key];else rules[key]=rule;
+   if(rule.mode==='auto'&&!rule.ref&&!rule.fontWeight)delete rules[key];else rules[key]=rule;
    try{localStorage.setItem(storageKey,JSON.stringify(rules))}catch{status('Layer choices could not be saved locally. They still apply for this session.')}
    invalidate();
   }
@@ -21,7 +22,18 @@ globalThis.P2RLayerEditor=(()=>{
     for(const [value,text]of Object.entries(modes))mode.appendChild(make('option',{value,textContent:text}));mode.value=rule.mode;mode.disabled=busy;label.appendChild(mode);row.appendChild(label);
     const ref=make('input',{value:rule.ref||'',placeholder:'Gameplay reference, e.g. UpgradeButton',maxLength:64,disabled:busy,ariaLabel:'Gameplay reference for '+layer.name});row.appendChild(ref);
     const template=make('input',{value:rule.template||'',placeholder:'Template key mapped in Studio',maxLength:64,disabled:busy,ariaLabel:'Reusable template for '+layer.name});template.hidden=rule.mode!=='template';row.appendChild(template);
-    const update=()=>{const next={mode:mode.value,ref:ref.value.trim()};if(next.mode==='template')next.template=template.value.trim();template.hidden=next.mode!=='template';save(key,next)};
+    let weight;
+    if(layer.type==='text'){
+     const label=make('label',{textContent:'Font weight '});weight=make('select',{ariaLabel:'Font weight for '+layer.name});
+     const sourceLabel='From Penpot'+(Number.isFinite(layer.sourceWeight)?' ('+layer.sourceWeight+')':'')+' — default';
+     weight.appendChild(make('option',{value:'',textContent:sourceLabel}));
+     for(const [value,name]of Object.entries(weights))weight.appendChild(make('option',{value,textContent:name+' ('+value+')'}));
+     weight.value=rule.fontWeight?String(rule.fontWeight):'';label.appendChild(weight);row.appendChild(label);
+     row.appendChild(make('small',{className:'weight-help',textContent:'Overrides native text, including all styled runs. Image mode keeps the Penpot appearance. Available weights vary by Roblox font.'}));
+    }
+    const refreshWeight=()=>{if(weight){weight.p2rUnavailable=!['auto','native'].includes(mode.value);weight.disabled=busy||weight.p2rUnavailable}};
+    const update=()=>{const next={mode:mode.value,ref:ref.value.trim()};if(next.mode==='template')next.template=template.value.trim();if(weight?.value)next.fontWeight=Number(weight.value);template.hidden=next.mode!=='template';refreshWeight();save(key,next)};
+    if(weight)weight.onchange=update;refreshWeight();
     mode.onchange=update;ref.oninput=update;ref.onchange=update;template.oninput=update;template.onchange=update;root.appendChild(row);
    }
    if(matches.length>100)root.appendChild(make('p',{textContent:'Showing 100 of '+matches.length+' layers. Search to narrow the list.'}));
@@ -31,7 +43,7 @@ globalThis.P2RLayerEditor=(()=>{
   el('layers-search').oninput=render;
   return {
    options:()=>({layerRules:structuredClone(rules)}),
-   setBusy(value){busy=value;el('layers-load').disabled=value;el('layers-search').disabled=value;for(const i of el('layer-list').querySelectorAll('input,select'))i.disabled=value},
+   setBusy(value){busy=value;el('layers-load').disabled=value;el('layers-search').disabled=value;for(const i of el('layer-list').querySelectorAll('input,select'))i.disabled=value||i.p2rUnavailable===true},
    onMessage(m){
     if(m.requestId!==activeRequest||!activeRequest)return false;
     if(m.type==='error'){status('Cannot read layers: '+m.message);activeRequest=null;return true}

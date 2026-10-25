@@ -10,3 +10,4 @@ footer{flex:none;display:flex;gap:8px;align-items:flex-start;background:var(--ra
 
 :root[data-theme="light"]{color-scheme:light;--bg:#f9fbff;--rail:#eaf4ff;--card:#fff;--line:#c1d7f2;--text:#0f192a;--muted:#475e7d;--accent:#0070eb;--ink:#fff;--button:#eaf2fd;--hover:#dceafb;--selected:#cfe5ff;--accent-hover:#005fd2}
 input[type="checkbox"]{accent-color:var(--accent)}
+.layer-rule>small.weight-help{display:block;margin:6px 0 0;line-height:1.5}

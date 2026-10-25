@@ -2,7 +2,7 @@
 
 Import Penpot layers, groups, and boards into Roblox Studio UI, review changes, and synchronize updates while preserving local edits and native object references. Open source under the MIT license.
 
-**2.7.4:** fixes duplicated text in background image exports and small alignment errors in nested icons, circular backdrops and badges. Update both the helper and Studio plugin, reopen the Penpot companion, then prepare/send/receive/import the design again. See the [release notes](RELEASE-NOTES.md).
+**2.7.5:** adds optional per-layer native font weights. From Penpot remains the default; choose ExtraBold or another weight when you prefer a different native appearance. Update the helper and reopen the Penpot companion; the Studio plugin remains 2.7.4. The earlier 2.7.4 release fixed duplicated background text and fractional icon alignment. See the [release notes](RELEASE-NOTES.md).
 
 ## Helper connection and upload key are separate
 
@@ -51,6 +51,8 @@ Close the old helper before starting the new one. Extract the complete ZIP and r
 ## Layer controls, references and templates
 
 In Penpot, open **Layers** and click **Read selection layers**. Search for a layer, then choose Auto, Native, Image, Layout only, Skip subtree, or Reusable template. Choices are saved in browser storage per Penpot file and source layer ID; changing a choice requires preparing again. They do not modify the design or automatically transfer to another person's browser.
+
+Text layers also have **Font weight**. **From Penpot** is the default; choose a weight such as **ExtraBold (800)** to adjust native text while keeping it editable. The choice applies to all styled runs in that text layer. Choose **From Penpot** to restore the source weights. Weight overrides do not alter Penpot or image exports, and are disabled in Image/Layout/Skip/Template modes. Available weights depend on the Roblox font family. An explicit weight takes precedence over that layer's font-weight token binding; its other token bindings remain available.
 
 - **Auto** keeps the normal fidelity policy. **Native** requests editable conversion and rejects geometry/effects that cannot be preserved; font substitutions remain reported. **Image** flattens that layer's visual subtree, retaining covered descendant geometry and controls.
 - **Layout only** omits the layer's own appearance and retains child content. **Skip subtree** omits the layer and descendants; previous imported instances are hidden and retained even with Hide removed disabled.

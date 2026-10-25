@@ -1,0 +1,14 @@
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+import {mixedText} from './studio-advanced-fixture.mjs';
+const context={};vm.createContext(context);for(const f of ['corners.js','tokens.js','exporter.js'])vm.runInContext(await readFile(new URL('../penpot/'+f,import.meta.url),'utf8'),context);
+const shape=(id,type,extra={})=>({id,name:id,type,width:200,height:24,center:{x:100,y:12},opacity:1,children:[],fills:[{fillColor:'#FFFFFF'}],strokes:[],...extra});
+const stats=shape('stats','text',{characters:'0.58s | Luck 2.5',fontFamily:'Nunito',fontWeight:700,fontSize:9,textBounds:{width:65.03125,height:12}});
+const rich=mixedText();rich.id='rich';
+const root=shape('weights','board',{width:400,height:100,center:{x:200,y:50},children:[stats,rich]});
+const api={currentFile:{id:'weight-fixture'},currentPage:{id:'page'},selection:[root]};
+const exportRules=layerRules=>context.P2R.exportSelection(api,[root],{tokens:false,layerRules}).document;
+export const original=exportRules({});
+export const heavier=exportRules({'weight-fixture:stats':{fontWeight:800},'weight-fixture:rich':{fontWeight:800}});
+export const image=exportRules({'weight-fixture:stats':{mode:'image',fontWeight:800}});
+for(const a of image.assets)image.assetMap[a.key]='rbxassetid://0';

@@ -137,11 +137,13 @@ globalThis.P2R = (() => {
       shapes.set(s.id, s);
       const rule=rules[api.currentFile.id+':'+s.id]||{},mode=rule.mode||'auto';
       if(!['auto','native','image','layout','skip','template'].includes(mode))throw Error(s.name+': invalid layer import mode.');
+      const fontWeight=rule.fontWeight;
+      if(fontWeight!=null&&(s.type!=='text'||!Number.isInteger(fontWeight)||fontWeight<100||fontWeight>900||fontWeight%100!==0))throw Error(s.name+': font weight override requires a text layer and a weight from 100 to 900 in steps of 100.');
       const ref=String(rule.ref||'').trim(),template=String(rule.template||'').trim();
       if(ref&&!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(ref))throw Error(s.name+': gameplay reference must be an identifier of 1–64 characters.');
       if(ref&&references.has(ref))throw Error('Duplicate gameplay reference: '+ref);
       if(mode==='template'&&!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(template))throw Error(s.name+': choose a template key of 1–64 identifier characters.');
-      if(mode!=='auto'||ref)custom=true;
+      if(mode!=='auto'||ref||fontWeight!=null)custom=true;
       if(mode==='skip'){
         if(!parent)throw Error('The root selection cannot be skipped. Select its parent to skip this layer.');
         const omit=(n,level)=>{if(excludedIds.length>=5000||level>64)throw Error('Selection exceeds 5000 shapes or 64 levels.');excludedIds.push(n.id);for(const c of n.children||[])omit(c,level+1)};omit(s,depth);return null;
@@ -230,8 +232,16 @@ globalThis.P2R = (() => {
           italic:s.fontStyle === 'italic',align:s.align,verticalAlign:s.verticalAlign,
           lineHeight:num(s.lineHeight,1.2),letterSpacing:num(s.letterSpacing),transform:s.textTransform,
           measuredWidth:s.textBounds.width,measuredHeight:s.textBounds.height,...(runs&&(runs.length>1||runs[0].decoration!=='none')?{runs}:{} )};
+        if(fontWeight!=null){
+          if(!raster&&!suppressed&&!ownLayout){
+            n.text.sourceWeight=n.text.weight;n.text.weight=fontWeight;n.text.weightOverride=fontWeight;
+            if(n.text.runs)n.text.runs=n.text.runs.map(r=>({...r,sourceWeight:r.weight,weight:fontWeight}));
+            warn(s,'Explicit native font weight: '+n.text.sourceWeight+' → '+fontWeight+'. Penpot text is unchanged.');
+          }else warn(s,'Font weight override is inactive: this layer does not render as native text. Image conversions keep the original Penpot appearance.');
+        }
       }
       if(options.tokens!==false&&s.tokens){n.tokens={};for(const [key,value]of Object.entries(s.tokens))if(typeof value==='string'&&value)n.tokens[key]=value;}
+      if(n.text?.weightOverride!=null&&n.tokens?.fontWeight){delete n.tokens.fontWeight;warn(s,'Font-weight token binding skipped because this layer has an explicit native weight override.');}
       if (s.flex) {
         const f=s.flex;
         n.layout={dir:f.dir,wrap:f.wrap,gap:f.dir.startsWith('row')?f.columnGap:f.rowGap,
@@ -347,7 +357,7 @@ globalThis.P2R = (() => {
   }
   function describeSelection(api){
    const selection=[...api.selection];if(selection.length!==1)throw Error('Select exactly one layer, group, or board.');
-   const layers=[];const visit=(n,depth)=>{if(depth>64||layers.length>=5000)throw Error('Selection exceeds 5000 layers or 64 levels.');layers.push({id:n.id,name:n.name,type:n.type,depth});for(const c of n.children||[])visit(c,depth+1)};visit(selection[0],0);
+   const layers=[];const visit=(n,depth)=>{if(depth>64||layers.length>=5000)throw Error('Selection exceeds 5000 layers or 64 levels.');layers.push({id:n.id,name:n.name,type:n.type,depth,...(n.type==='text'&&Number.isFinite(Number(n.fontWeight))?{sourceWeight:Number(n.fontWeight)}:{})});for(const c of n.children||[])visit(c,depth+1)};visit(selection[0],0);
    return {fileId:api.currentFile.id,layers};
   }
   return {exportSelection,exportAssets,parseName,fontMatch,shouldBakeText,textRuns,describeSelection};
