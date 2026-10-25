@@ -3,7 +3,12 @@ local Http = game:GetService('HttpService')
 local Behaviors=require(script.Parent.Behaviors)
 local RichText=require(script.Parent.RichText)
 local Themes=require(script.Parent.Themes)
+local References=require(script.Parent.References)
+local Templates=require(script.Parent.Templates)
+local Gradient=require(script.Parent.Gradient)
 local Importer = {}
+Importer.getTemplates=Templates.read
+Importer.mapTemplate=Templates.register
 local measurementCache={}
 local function nativeVisual(n,capabilities)
  if not n.nativeVisual then return false end
@@ -48,7 +53,7 @@ local function locked(i,p)
  return false
 end
 function Importer.validate(d)
- assert(type(d)=='table' and d.format=='penpot-roblox' and table.find({1,2,3,4},d.version),'Unsupported document format/version. Update the Studio plugin for newer exports.')
+ assert(type(d)=='table' and d.format=='penpot-roblox' and table.find({1,2,3,4,5},d.version),'Unsupported document format/version. Update the Studio plugin for newer exports.')
  assert(type(d.source)=='table','Missing source')
  for _,k in {'fileId','pageId','rootId'} do assert(type(d.source[k])=='string' and #d.source[k]>0 and #d.source[k]<200,'Invalid source '..k) end
  assert(type(d.design)=='table' and d.design.id==d.source.rootId,'Root identity mismatch')
@@ -64,12 +69,16 @@ function Importer.validate(d)
  assert(type(d.assetMap or {})=='table' and type(d.fontMap or {})=='table','Invalid mapping tables')
  for k,v in pairs(d.assetMap or {}) do assert(type(k)=='string' and type(v)=='string' and v:match('^rbxassetid://%d+$'),'Asset map values must be rbxassetid://NUMBER') end
  for k,v in pairs(d.fontMap or {}) do assert(type(k)=='string' and type(v)=='string' and (v:match('^rbxasset://fonts/families/[%w_-]+%.json$') or v:match('^rbxassetid://%d+$')),'Invalid font family URI') end
- local ids,count,panels,actions={},0,{},{}
+ local ids,count,panels,actions,aliases={},0,{},{},{}
+ if d.excludedIds then assert(d.version>=5 and type(d.excludedIds)=='table'and #d.excludedIds<=5000,'Invalid excluded IDs');for _,id in d.excludedIds do assert(type(id)=='string'and #id>0 and #id<200 and not id:find('::',1,true),'Invalid excluded ID')end end
  local types={board=true,group=true,rectangle=true,text=true,ellipse=true,path=true,boolean=true,['svg-raw']=true,image=true}
  local function walk(n,depth)
   count+=1; assert(count<=5000 and depth<=64,'Document exceeds shape/depth limit')
   assert(type(n)=='table' and type(n.id)=='string' and #n.id>0 and #n.id<200 and not n.id:find('::',1,true) and not ids[n.id],'Duplicate/invalid ID')
   ids[n.id]=true; assert(types[n.type],'Unsupported shape type: '..tostring(n.type))
+  if n.importMode then assert(d.version>=5 and table.find({'native','image','layout','template'},n.importMode),'Invalid layer import mode')end
+  if n.ref then assert(d.version>=5 and type(n.ref)=='string'and #n.ref<=64 and n.ref:match('^[A-Za-z_][A-Za-z0-9_]*$')and not aliases[n.ref],'Invalid/duplicate gameplay reference');aliases[n.ref]=true end
+  if n.importMode=='template'then assert(type(n.template)=='string'and #n.template<=64 and n.template:match('^[A-Za-z_][A-Za-z0-9_]*$')and #n.children==0,'Invalid template layer')end
   assert(type(n.name)=='string' and #n.name<=1000,'Invalid shape name')
   for _,k in {'x','y','rotation'} do number(n[k],-1000000,1000000,k) end
   for _,k in {'width','height'} do number(n[k],0,100000,k) end
@@ -143,6 +152,7 @@ function Importer.validate(d)
   for _,c in ipairs(n.children) do walk(c,depth+1) end
  end
  walk(d.design,0)
+ for _,id in d.excludedIds or {}do assert(not ids[id],'Excluded ID is also included in the design')end
  for _,target in actions do assert(panels[target],'Panel action target does not exist: '..target) end
  return count
 end
@@ -217,8 +227,25 @@ local function descriptors(d,options)
   z+=2
   local nativeGroup=n.nativeGroup==true
   local scroll=n.scroll==true and d.options and d.options.behaviors==true
+  if n.importMode=='template'then
+   local template,revision=Templates.resolve(options,n.template)
+   local props={Name=n.name,Position=UDim2.fromOffset(parent and n.x or 0,parent and n.y or 0),Size=UDim2.fromOffset(n.width,n.height),AnchorPoint=Vector2.zero,Rotation=n.rotation,Visible=n.visible~=false,ZIndex=z,LayoutOrder=z}
+   if parent and grids[parent]then props.LayoutOrder=grids[parent].order[n.id]end
+   if parentNode and parentNode.layout and parentNode.layout.native and (not parentNode.assetKey or nativeVisual(parentNode,capabilities))then
+    local axisName=parentNode.layout.dir=='row'and'x'or'y';props.LayoutOrder=0
+    for _,sibling in parentNode.children do
+     local cross=axisName=='x'and'y'or'x';local wrap=parentNode.layout.wrap=='wrap'
+     if(wrap and sibling[cross]<n[cross]-.1)or((not wrap or math.abs(sibling[cross]-n[cross])<.1)and(sibling[axisName]<n[axisName]or(sibling[axisName]==n[axisName]and sibling.id<n.id)))then props.LayoutOrder+=1 end
+    end
+   end
+   local behavior=d.options and d.options.behaviors and n.behavior
+   if behavior and behavior.action~=''then assert(template:IsA('GuiButton'),'Template actions require a button template');hasActions=true end
+   add(n.id,parent,template.ClassName,props,{P2R_Template=n.template,P2R_TemplateRevision=revision,P2R_Panel=behavior and behavior.panel or '',P2R_Action=behavior and behavior.action or '',P2R_Target=behavior and behavior.target or ''})
+   result[#result].template=template;quality.native+=1;table.insert(quality.items,{name=n.name,id=n.id,mode='native',detail='Reusable template: '..n.template..'; authored children and scripts retained'})
+   return
+  end
   local opacity=nativeGroup and 1 or inheritedOpacity*(n.opacity or 1)
-  local text=n.type=='text'
+  local text=n.type=='text'and n.importMode~='layout'
   local modern=nativeVisual(n,capabilities)
   local raster=n.assetKey~=nil and not modern
   local grid
@@ -347,16 +374,12 @@ local function descriptors(d,options)
    if g then
     if g.type~='linear' then warn(n,'Radial gradient needs a raster asset; first fill color retained.')
     else
-     local colors,alpha={},{}
-     local stops=table.clone(g.stops)
-     if stops[1].offset>0 then local s=table.clone(stops[1]);s.offset=0;table.insert(stops,1,s) end
-     if stops[#stops].offset<1 then local s=table.clone(stops[#stops]);s.offset=1;table.insert(stops,s) end
-     for _,s in ipairs(stops) do table.insert(colors,ColorSequenceKeypoint.new(s.offset,color(s.color)));table.insert(alpha,NumberSequenceKeypoint.new(s.offset,1-(s.opacity or 1))) end
+     local colors,alpha=Gradient.sequences(g.stops)
      local dx=(g.endX-g.startX)*n.width;local dy=(g.endY-g.startY)*n.height
      if math.abs(g.startX)+math.abs(g.startY)+math.abs(g.endX)+math.abs(g.endY)>4 then warn(n,'Gradient coordinates are outside normalized bounds; review angle.') end
      if text then p.TextColor3=Color3.new(1,1,1) else p.BackgroundColor3=Color3.new(1,1,1) end
      -- The descriptor references p, so this update is included in the plan.
-     add(n.id..'::gradient',n.id,'UIGradient',{Name='Penpot Gradient',Color=ColorSequence.new(colors),Transparency=NumberSequence.new(alpha),Rotation=math.deg(math.atan2(dy,dx)),Offset=Vector2.new((g.startX+g.endX)/2-.5,(g.startY+g.endY)/2-.5),Enabled=true})
+     add(n.id..'::gradient',n.id,'UIGradient',{Name='Penpot Gradient',Color=colors,Transparency=alpha,Rotation=math.deg(math.atan2(dy,dx)),Offset=Vector2.new((g.startX+g.endX)/2-.5,(g.startY+g.endY)/2-.5),Enabled=true})
      if math.abs(math.sqrt(dx*dx+dy*dy)-(math.abs(math.cos(math.atan2(dy,dx)))*n.width+math.abs(math.sin(math.atan2(dy,dx)))*n.height))>.1 then warn(n,'Gradient span differs from Roblox edge-to-edge interpolation; review or rasterize.') end
     end
    end
@@ -381,12 +404,12 @@ local function descriptors(d,options)
    local flex=({['space-between']=Enum.UIFlexAlignment.SpaceBetween,['space-around']=Enum.UIFlexAlignment.SpaceAround,['space-evenly']=Enum.UIFlexAlignment.SpaceEvenly})[justify] or Enum.UIFlexAlignment.None
    add(n.id..'::layout',n.id,'UIListLayout',{Name='Penpot Layout',FillDirection=horizontal and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical,Padding=UDim.new(0,l.gap or 0),SortOrder=Enum.SortOrder.LayoutOrder,HorizontalAlignment=h,VerticalAlignment=v,Wraps=l.wrap=='wrap',HorizontalFlex=horizontal and flex or Enum.UIFlexAlignment.None,VerticalFlex=horizontal and Enum.UIFlexAlignment.None or flex})
   end
-  local mode=n.visualSuppressed and 'covered' or raster and 'images' or n.smooth and 'smoothed' or 'native';quality[mode]+=1
+  local mode=n.visualSuppressed and n.importMode~='layout'and 'covered' or raster and 'images' or n.smooth and 'smoothed' or 'native';quality[mode]+=1
   local substituted=text and not raster and not n.visualSuppressed and n.text.fontSubstituted==true and not (d.fontMap or {})[n.text.family]
   if substituted then quality.fonts+=1 end
   if n.layout and n.layout.native and not raster then quality.layouts+=1 end
   table.insert(quality.items,{name=n.name,id=n.id,mode=mode,detail=(substituted and ('Font: '..n.text.family..' → '..n.text.robloxFamily)or modern and 'Native effects; compatibility image unused' or n.smooth and 'Smoothed 9-slice image; native children' or raster and 'Image appearance; source geometry retained' or n.visualSuppressed and 'Appearance included in ancestor image' or 'Editable native appearance')..(n.layout and (n.layout.native and not raster and '; native layout' or '; measured positions')or '')})
-  local detail=quality.items[#quality.items];if grid then detail.detail..='; native uniform grid'end;if text and n.text.runs and not raster then detail.detail..='; RichText runs' end;if n.tintColor then detail.detail..='; tintable mask'end;if n.glow then detail.detail..='; baked silhouette glow'end;if n.slice then detail.detail..='; explicit nine-slice'end;if n.tokens and next(n.tokens)then detail.detail..='; token bindings retained'end
+  local detail=quality.items[#quality.items];if n.importMode=='layout'then detail.detail='Layout-only container; child visuals retained'end;if grid then detail.detail..='; native uniform grid'end;if text and n.text.runs and not raster then detail.detail..='; RichText runs' end;if n.tintColor then detail.detail..='; tintable mask'end;if n.glow then detail.detail..='; baked silhouette glow'end;if n.slice then detail.detail..='; explicit nine-slice'end;if n.tokens and next(n.tokens)then detail.detail..='; token bindings retained'end
   for _,c in ipairs(n.children) do walk(c,n.id,n,opacity) end
  end
  walk(d.design,nil,nil,1)
@@ -414,6 +437,8 @@ local function descriptors(d,options)
   end
  end
  for id,n in nodes do for key in n.tokens or {}do if not (usedBindings[id]or {})[key]then warn(n,'Token binding retained without a runtime mapping: '..key)end end end
+ local references=options.generateRefs==true;for _,n in nodes do if n.ref then references=true end end
+ if references then add(d.design.id..'::refs',nil,'ModuleScript',{Name='Penpot References',Source=References.source(d)});table.insert(warnings,'Generated Penpot References module. Bind it to the imported wrapper from your own gameplay code.')end
  if d.tokens and d.options and d.options.runtimeThemes then add(d.design.id..'::theme',nil,'ModuleScript',{Name='Penpot Theme',Source=Themes.source(d.tokens,d.source.fileId..'/'..d.source.rootId)});table.insert(warnings,'Generated Penpot Theme module: require it and call Apply(wrapper, themeId). No theme changes run automatically.')end
  if hasActions then
   add(d.design.id..'::controller',nil,'LocalScript',{Name='Penpot Bridge Controller',Source=Behaviors.source(),Disabled=false})
@@ -451,6 +476,7 @@ function Importer.prepare(d,target,options)
   wanted[item.id]=true
   local old=index[item.id];item.existing=old
   local kind=not old and 'add' or old.ClassName~=item.class and 'class' or 'update'
+  if old and ((item.template and(old:GetAttribute('P2R_Template')~=(item.attributes or {}).P2R_Template or old:GetAttribute('P2R_TemplateRevision')~=(item.attributes or {}).P2R_TemplateRevision))or(not item.template and old:GetAttribute('P2R_Template')))then kind='class' end
   item.kind=kind
   local action=kind
   if kind=='add' then stats.added+=1 elseif kind=='class' then stats.classChanges+=1 else
@@ -521,6 +547,7 @@ function Importer.verify(d,target,options)
    if i.ClassName~=item.class then issue('error','wrong-class',name,'Expected '..item.class..', found '..i.ClassName..'.',i)
    else
     local last=decode(i:GetAttribute('P2R_Last'));local edits={};local checkedImage=false
+    for attribute,value in item.attributes or {}do report.checks+=1;if i:GetAttribute(attribute)~=value then issue('error','metadata-difference',name,'Imported '..attribute..' differs from the received design or template mapping. Review and reimport.',i)end end
     for prop,value in item.props do
      report.checks+=1
      local actual=i[prop];local differs=signature(actual)~=signature(value)
@@ -597,13 +624,16 @@ function Importer.apply(plan,onProgress)
    local i=item.existing
    if item.kind=='class' then
     i:SetAttribute('P2R_Retired',true)
+    if i:GetAttribute('P2R_Template')then
+     for _,child in i:GetDescendants()do if child:IsA('BaseScript')then child:SetAttribute('P2R_PreRetiredDisabled',child.Disabled);child.Disabled=true end end
+    end
     if i:IsA('GuiObject') then i.Visible=false elseif i:IsA('UIComponent') and i:IsA('UIListLayout') then i.Parent=nil end
     -- Preserve the old instance and every user child/reference. New ID owner is separate.
     if i:IsA('UIListLayout') or i:IsA('UIPadding') then error('Layout class replacement requires manual resolution') end
     i=nil
    end
    local fresh=not i
-   if fresh then i=Instance.new(item.class);i:SetAttribute('P2R_Id',item.id) end
+   if fresh then i=item.template and Templates.clone(item.template)or Instance.new(item.class);i:SetAttribute('P2R_Id',item.id) end
    i:SetAttribute('P2R_Source',plan.key)
    local last=decode(i:GetAttribute('P2R_Last'))
    if i:IsA('LocalScript') and i:GetAttribute('P2R_DisabledByImporter') then
@@ -626,6 +656,7 @@ function Importer.apply(plan,onProgress)
    if onProgress and ix%25==0 then onProgress(ix,#plan.items) end
    if ix%100==0 then task.wait() end
   end
+  local excluded={};for _,id in plan.document.excludedIds or {}do excluded[id]=true end
   for id,i in pairs(plan.index) do
    if not plan.wanted[id] then
     i:SetAttribute('P2R_Stale',true)
@@ -634,7 +665,7 @@ function Importer.apply(plan,onProgress)
     end
     -- Replaced source-owned decorations must stop rendering even when removed layers are retained visibly.
     local baseId=id:match('^(.-)::')
-    if plan.options.hideRemoved or (baseId and plan.wanted[baseId])then
+    if plan.options.hideRemoved or excluded[id]or(baseId and excluded[baseId])or (baseId and plan.wanted[baseId])then
      if i:IsA('GuiObject') and not i:GetAttribute('P2R_HiddenByImporter') then
       i:SetAttribute('P2R_PreStaleVisible',i.Visible);i:SetAttribute('P2R_HiddenByImporter',true);i.Visible=false
      elseif i:IsA('UIGradient') or i:IsA('UIStroke') or i:IsA('UIShadow') then if not i:GetAttribute('P2R_HiddenByImporter')then i:SetAttribute('P2R_PreStaleEnabled',i.Enabled)end;i:SetAttribute('P2R_HiddenByImporter',true);i.Enabled=false

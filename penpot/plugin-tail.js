@@ -4,7 +4,9 @@ penpot.ui.onMessage(async message => {
   const requestId=message?.requestId;
   const send=value=>penpot.ui.sendMessage({...value,requestId});
   try {
-    if(message?.type === 'export') {
+    if(message?.type==='layers') {
+      send({type:'layer-list',...P2R.describeSelection(penpot)});
+    } else if(message?.type === 'export') {
       lastBundle=undefined;lastRequestId=requestId;
       lastBundle=P2R.exportSelection(penpot,[...penpot.selection],message.options||{});
       send({type:'document',document:lastBundle.document});

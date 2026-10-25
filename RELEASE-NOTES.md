@@ -1,3 +1,14 @@
+# Penpot Bridge 2.6.0
+
+- Added optional per-layer Auto, Native, Image, Layout only, Skip subtree and Reusable template controls in the Penpot companion. Choices persist locally per file/layer; preparing again applies them. Native mode rejects unsupported fidelity instead of silently discarding effects. Explicit skips hide and retain old imports.
+- Added named gameplay references and optional source-ID reference modules. Reference lookup survives renames/reparenting and rebinds to new instances after reviewed replacements. Gameplay code stays in your own scripts.
+- Added place-local reusable UI template mappings in Studio Options. Clones retain authored appearance, children and scripts while source geometry controls placement. Mapping revisions require reviewed replacement; retired template scripts are disabled. Unmapped keys fail before import mutation.
+- Improved native linear-gradient color fidelity through bounded RGB-linear samples, preserving authored stops and opacity. Five actual Penpot PNG versus running-client comparisons improved mean channel error: red/blue 29.30→2.58, black/white 43.87→3.11, pastel 2.05→0.55, three stops 9.48→2.48, varying alpha 17.75→1.75 (0–255 channel scale, sampled horizontal center lines excluding edges). This is an approximation, not a cross-platform guarantee.
+- Advanced gradients retain PNG fallback. Roblox's appearance guide identifies Type/Scale/TileMode as part of the Upgraded UIGradients Studio beta. The tested configuration rendered them as linear; no beta setting is changed by this plugin.
+- Fixed generated-plugin packaging so literal Luau pattern characters survive support-module inlining.
+
+Validation: 51 Node tests and 61 Studio checks (11 gradient, 13 layer/template/reference, 18 verifier and 19 grid/real-export). The running-client color investigation used known solid RGB swatches and five actual Penpot gradient exports. Temporary design/Studio test objects were removed afterward. Update both helper and Studio plugin for the new layer controls (document version 5); old version 1–4 bundles remain supported. No prototype-navigation expansion or framework-output backend is included.
+
 # Penpot Bridge 2.5.0
 
 - Added **Options → Use native uniform grids**, off by default. Updated Penpot exports retain grid metadata; compatible grids create native UIGridLayout and padding, while unsafe grids keep measured positions with a review warning. Toggling off retires layout components outside the rendered hierarchy and preserves slot instances.

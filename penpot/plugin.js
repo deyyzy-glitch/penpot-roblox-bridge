@@ -117,6 +117,8 @@ globalThis.P2R = (() => {
     return runs;
   }
   function exportSelection(api, selection = [...api.selection], options = {}) {
+    const rules=options.layerRules||{};if(!rules||typeof rules!=='object'||Array.isArray(rules))throw Error('Invalid layer rules.');
+    const excludedIds=[],references=new Set();let custom=false;
     const textMode=options.textMode||'auto';if(!['auto','live','exact'].includes(textMode))throw Error('Invalid text mode.');
     const behaviors=options.behaviors===true,preferNativeGroups=options.nativeGroups!==false;
     if(options.runtimeThemes&&options.tokens===false)throw Error('Enable token bindings to generate a theme module.');
@@ -133,6 +135,18 @@ globalThis.P2R = (() => {
     function visit(s, parent, depth, suppressed=false) {
       if (++count > 5000 || depth > 64) throw Error('Selection exceeds 5000 shapes or 64 levels.');
       shapes.set(s.id, s);
+      const rule=rules[api.currentFile.id+':'+s.id]||{},mode=rule.mode||'auto';
+      if(!['auto','native','image','layout','skip','template'].includes(mode))throw Error(s.name+': invalid layer import mode.');
+      const ref=String(rule.ref||'').trim(),template=String(rule.template||'').trim();
+      if(ref&&!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(ref))throw Error(s.name+': gameplay reference must be an identifier of 1–64 characters.');
+      if(ref&&references.has(ref))throw Error('Duplicate gameplay reference: '+ref);
+      if(mode==='template'&&!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(template))throw Error(s.name+': choose a template key of 1–64 identifier characters.');
+      if(mode!=='auto'||ref)custom=true;
+      if(mode==='skip'){
+        if(!parent)throw Error('The root selection cannot be skipped. Select its parent to skip this layer.');
+        const omit=(n,level)=>{if(excludedIds.length>=5000||level>64)throw Error('Selection exceeds 5000 shapes or 64 levels.');excludedIds.push(n.id);for(const c of n.children||[])omit(c,level+1)};omit(s,depth);return null;
+      }
+      if(ref)references.add(ref);
       const parsed=parseName(s.name,behaviors);
       const rot = num(parent?.rotation) * Math.PI / 180;
       const dx = s.center.x - (parent?.center.x || 0), dy = s.center.y - (parent?.center.y || 0);
@@ -168,21 +182,23 @@ globalThis.P2R = (() => {
         const typography=[];
         if(!runs&&(s.fills==='mixed'||[s.fontFamily,s.fontSize,s.fontWeight,s.align,s.fontStyle].includes('mixed')))typography.push('mixed text styling');
         if(num(s.letterSpacing)||(!runs&&s.textDecoration&&s.textDecoration!=='none')||s.direction==='rtl')typography.push('text typography');
-        if(runs?runs.some(r=>shouldBakeText(textMode,fontMatch(r.family))):shouldBakeText(textMode,match))typography.push('font fidelity');
+        if(mode!=='native'&&(runs?runs.some(r=>shouldBakeText(textMode,fontMatch(r.family))):shouldBakeText(textMode,match)))typography.push('font fidelity');
         if(!runs&&(s.characters.includes('\n')||s.textBounds.height>num(s.fontSize,16)*1.8))typography.push('multiline typography');
         if(runs&&(s.characters.includes('\n')||runs.length>1))warn(s,'Editable RichText: review wrapping and font metrics in Studio.');
         if(textMode==='live'){if(typography.length||!match.exact)warn(s,'Editable text: typography/font may differ from Penpot.');}
         else reasons.push(...typography);
-        if(!match.exact&&!shouldBakeText(textMode,match))warn(s,'Editable font substitution: '+s.fontFamily+' → '+match.family+'.');
+        if(!match.exact&&(mode==='native'||!shouldBakeText(textMode,match)))warn(s,'Editable font substitution: '+s.fontFamily+' → '+match.family+'.');
       }
-      const nativeGroup=preferNativeGroups&&!suppressed&&!!s.children?.length&&num(s.opacity,1)<1&&s.clipContent===true&&reasons.length===0&&!vector&&!image&&!parsed.button&&!parsed.scroll;
-      const subtree=!!s.children?.length&&((num(s.opacity,1)<1&&!nativeGroup)||(s.clipContent&&(reasons.length||new Set(radii).size>1))||(s.blendMode&&s.blendMode!=='normal')||(shadows.length>0&&!nativeShadows));
+      if(mode==='native'&&(vector||image||reasons.length))throw Error(s.name+': Native mode cannot preserve '+(vector?'vector geometry':image?'image fill':reasons.join(', '))+'. Use Auto or Image instead.');
+      const ownLayout=mode==='layout'||mode==='template';
+      const nativeGroup=!ownLayout&&mode!=='image'&&preferNativeGroups&&!suppressed&&!!s.children?.length&&num(s.opacity,1)<1&&s.clipContent===true&&reasons.length===0&&!vector&&!image&&!parsed.button&&!parsed.scroll;
+      const subtree=!ownLayout&&!!s.children?.length&&(mode==='image'||(num(s.opacity,1)<1&&!nativeGroup)||(s.clipContent&&(reasons.length||new Set(radii).size>1))||(s.blendMode&&s.blendMode!=='normal')||(shadows.length>0&&!nativeShadows));
       if(subtree)reasons.push('composited subtree');
-      const raster=!suppressed&&(vector||image||reasons.length>0);
-      const nativeVisual=!suppressed&&raster&&!subtree&&!vector&&!image&&['board','group','rectangle'].includes(s.type)&&reasons.every(v=>v==='individual corner radii'||v==='shadows')&&(!shadows.length||(nativeShadows&&num(s.opacity,1)===1))&&!parsed.scroll;
+      const raster=!ownLayout&&!suppressed&&(mode==='image'||vector||image||reasons.length>0);
+      const nativeVisual=mode!=='image'&&!ownLayout&&!suppressed&&raster&&!subtree&&!vector&&!image&&['board','group','rectangle'].includes(s.type)&&reasons.every(v=>v==='individual corner radii'||v==='shadows')&&(!shadows.length||(nativeShadows&&num(s.opacity,1)===1))&&!parsed.scroll;
       const solid=fills.length===1&&fills[0].fillColor&&!fills[0].fillColorGradient;
       const strokes=s.strokes||[];
-      const canSmooth=smoothing>0&&!suppressed&&!vector&&!image&&s.type!=='text'&&s.type!=='ellipse'&&solid&&radii.some(v=>v>0)&&radii.every(v=>v<=120)&&!shadows.length&&!s.blur&&!s.backgroundBlur&&(!s.blendMode||s.blendMode==='normal')&&!s.flipX&&!s.flipY&&!(s.clipContent&&s.children?.length)&&!parsed.scroll&&num(s.opacity,1)===1&&strokes.length<=1&&strokes.every(v=>v.strokeAlignment==='inner'&&(!v.strokeStyle||v.strokeStyle==='solid')&&!v.strokeColorGradient&&num(v.strokeWidth,1)<=Math.min(120,s.width/2,s.height/2));
+      const canSmooth=!ownLayout&&mode!=='image'&&smoothing>0&&!suppressed&&!vector&&!image&&s.type!=='text'&&s.type!=='ellipse'&&solid&&radii.some(v=>v>0)&&radii.every(v=>v<=120)&&!shadows.length&&!s.blur&&!s.backgroundBlur&&(!s.blendMode||s.blendMode==='normal')&&!s.flipX&&!s.flipY&&!(s.clipContent&&s.children?.length)&&!parsed.scroll&&num(s.opacity,1)===1&&strokes.length<=1&&strokes.every(v=>v.strokeAlignment==='inner'&&(!v.strokeStyle||v.strokeStyle==='solid')&&!v.strokeColorGradient&&num(v.strokeWidth,1)<=Math.min(120,s.width/2,s.height/2));
       let smooth;
       if(canSmooth){const normalized=radii.map(v=>Math.min(v,Math.min(s.width,s.height)/2));const spec={radii:normalized,smoothing,fill:{color:fills[0].fillColor,opacity:num(fills[0].fillOpacity,1)},...(strokes.length?{stroke:{color:strokes[0].strokeColor||'#000000',opacity:num(strokes[0].strokeOpacity,1),width:num(strokes[0].strokeWidth,1)}}:{})};
        const geometry=P2RCorners.surface(spec);smooth={key:`${api.currentFile.id}:${s.id}:smooth`,slice:geometry.slice};assets.push({key:smooth.key,shapeId:s.id,name:s.name+' smooth corners',kind:'smooth',spec});}
@@ -197,13 +213,14 @@ globalThis.P2R = (() => {
       const n = {
         id:s.id, name:behaviors?parsed.name:s.name, type:s.type, x, y, width:s.width, height:s.height,
         rotation:parent ? num(s.rotation)-num(parent.rotation) : 0,
-        opacity:num(s.opacity,1), visible:!s.hidden,
+        opacity:ownLayout?1:num(s.opacity,1), visible:!s.hidden,
         clip:!!s.clipContent, radius:radii[0],radii,shadows:nativeShadows?shadows:[],nativeVisual:!!nativeVisual&&!smooth,smooth, fills,
         strokes:copy(s.strokes || []),
         constraints:{horizontal:s.constraintsHorizontal || 'left',vertical:s.constraintsVertical || 'top'},
         assetKey:raster&&!smooth ? `${api.currentFile.id}:${s.id}` : undefined,
         rasterSurface:raster&&!vector&&!image,rasterSubtree:subtree,
-        visualSuppressed:suppressed,rasterOpacityBaked:raster,
+        visualSuppressed:suppressed||ownLayout,rasterOpacityBaked:raster,
+        ...(mode!=='auto'?{importMode:mode}:{}),...(ref?{ref}:{}),...(mode==='template'?{template}:{}),
         button:parsed.button,nativeGroup,
         ...(behaviors?{behavior:{panel:parsed.panel||'',action:parsed.action||'',target:parsed.target||''},scroll:!!parsed.scroll,initiallyClosed:!!parsed.closed}:{}),
         children:[]
@@ -247,11 +264,12 @@ globalThis.P2R = (() => {
         warn(s,'Grid uses measured positions by default. Enable Use native uniform grids in Studio Options to convert compatible cells.');
       }
       if(s.layoutChild)n.layoutChild={horizontalSizing:s.layoutChild.horizontalSizing,verticalSizing:s.layoutChild.verticalSizing};
-      n.children=(s.children || []).map(c=>visit(c,s,depth+1,suppressed||subtree));
+      n.children=mode==='template'?[]:(s.children || []).map(c=>visit(c,s,depth+1,suppressed||subtree)).filter(Boolean);
       return n;
     }
     const document={format:'penpot-roblox',version,source:{fileId:api.currentFile.id,pageId:api.currentPage.id,rootId:root.id},
       design:visit(root,null,0),warnings,assets,assetMap:{},fontMap:{},options:{textMode,behaviors,nativeGroups:preferNativeGroups,smoothing,runtimeThemes:options.runtimeThemes===true,autoTint:options.autoTint!==false},capabilities:['text-modes','native-groups','behavior-tags','native-effects','flex-layouts','quality-report','smooth-corners','rich-text','tokens','image-controls']};
+    if(custom){document.version=5;document.excludedIds=excludedIds;document.capabilities.push('layer-modes','gameplay-references','templates');}
     if(options.tokens!==false){
       try{const catalog=api.library?.local?.tokens;if(catalog)document.tokens=P2RTokens.exportCatalog(catalog,warnings);}
       catch(error){
@@ -307,7 +325,12 @@ globalThis.P2R = (() => {
     }
     return result;
   }
-  return {exportSelection,exportAssets,parseName,fontMatch,shouldBakeText,textRuns};
+  function describeSelection(api){
+   const selection=[...api.selection];if(selection.length!==1)throw Error('Select exactly one layer, group, or board.');
+   const layers=[];const visit=(n,depth)=>{if(depth>64||layers.length>=5000)throw Error('Selection exceeds 5000 layers or 64 levels.');layers.push({id:n.id,name:n.name,type:n.type,depth});for(const c of n.children||[])visit(c,depth+1)};visit(selection[0],0);
+   return {fileId:api.currentFile.id,layers};
+  }
+  return {exportSelection,exportAssets,parseName,fontMatch,shouldBakeText,textRuns,describeSelection};
 })();
 
 penpot.ui.open('Penpot Bridge', 'http://127.0.0.1:43129/ui.html', {width:440,height:610});
@@ -316,7 +339,9 @@ penpot.ui.onMessage(async message => {
   const requestId=message?.requestId;
   const send=value=>penpot.ui.sendMessage({...value,requestId});
   try {
-    if(message?.type === 'export') {
+    if(message?.type==='layers') {
+      send({type:'layer-list',...P2R.describeSelection(penpot)});
+    } else if(message?.type === 'export') {
       lastBundle=undefined;lastRequestId=requestId;
       lastBundle=P2R.exportSelection(penpot,[...penpot.selection],message.options||{});
       send({type:'document',document:lastBundle.document});

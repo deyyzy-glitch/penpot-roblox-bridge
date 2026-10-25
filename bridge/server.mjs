@@ -28,7 +28,7 @@ export function createBridge({token=crypto.randomBytes(24).toString('hex'),stora
    // Same-origin browser isolation + loopback Host validation; no credentials are sent to Penpot's parent frame.
    if(url.pathname==='/session'){if(!sameOrigin)return reply(403,{error:'Origin rejected'});return reply(200,{token,version:2})}
    if(url.pathname==='/setup'&&req.method==='GET'){res.setHeader('Content-Security-Policy',"frame-ancestors 'none'");return reply(200,await readFile(path.join(project,'bridge','setup.html')),'text/html')}
-   const staticFiles={'/manifest.json':['manifest.json','application/json'],'/plugin.js':['plugin.js','text/javascript'],'/ui.html':['ui.html','text/html'],'/ui.js':['ui.js','text/javascript'],'/corners.js':['corners.js','text/javascript'],'/image-editor.js':['image-editor.js','text/javascript']};
+   const staticFiles={'/manifest.json':['manifest.json','application/json'],'/plugin.js':['plugin.js','text/javascript'],'/ui.html':['ui.html','text/html'],'/ui.js':['ui.js','text/javascript'],'/corners.js':['corners.js','text/javascript'],'/image-editor.js':['image-editor.js','text/javascript'],'/layer-editor.js':['layer-editor.js','text/javascript']};
    if(staticFiles[url.pathname]&&req.method==='GET'){
     const [file,type]=staticFiles[url.pathname];res.setHeader('Access-Control-Allow-Origin','*');
     return reply(200,await readFile(path.join(root,file)),type);
@@ -47,7 +47,7 @@ export function createBridge({token=crypto.randomBytes(24).toString('hex'),stora
    }
    if(url.pathname==='/document'){
     if(req.method==='GET')return reply(document?200:404,document||{error:'Send a design from Penpot first'});
-    if(req.method==='POST'){const d=await body(64000000);if(d.format!=='penpot-roblox'||![1,2,3,4].includes(d.version)||!d.source?.rootId||d.source.rootId!==d.design?.id)throw Error('Invalid document envelope. Update both the helper and Studio plugin for newer exports.');document=d;return reply(200,{ok:true})}
+    if(req.method==='POST'){const d=await body(64000000);if(d.format!=='penpot-roblox'||![1,2,3,4,5].includes(d.version)||!d.source?.rootId||d.source.rootId!==d.design?.id)throw Error('Invalid document envelope. Update both the helper and Studio plugin for newer exports.');document=d;return reply(200,{ok:true})}
    }
    if(url.pathname==='/assets'&&req.method==='POST'){
     const a=await body(),png=Buffer.from(a.png||'','base64');

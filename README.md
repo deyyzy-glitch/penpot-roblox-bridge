@@ -15,7 +15,43 @@ If Roblox asks to contact **127.0.0.1**, it is asking to contact the helper on y
 
 The Windows download is a portable application, not an installer or a tray app. It does not automatically start at login. Run its launcher again after restarting your computer. Each person runs their own helper and uses their own Roblox credentials. No developer key is bundled.
 
-## Updating to 2.5.0
+## Updating to 2.6.0
+
+Update the Studio plugin for improved native linear-gradient colors, gameplay references, and reusable UI templates. Download the latest helper for the optional per-layer controls, then reopen the Penpot companion and prepare again. Layer overrides use document version 5 and require the 2.6 Studio plugin and helper; existing version 1–4 bundles remain supported. Gradient improvements also apply to old bundles when reimported with the updated Studio plugin.
+
+Close the old helper before starting the new one. Extract the complete ZIP and re-enter your own image key locally if needed. Updating the public release does not automatically replace a portable helper already running on your PC.
+
+## Layer controls, references and templates
+
+In Penpot, expand **Layer controls (optional)** and click **Read selected design layers**. Search for a layer, then choose Auto, Native, Image, Layout only, Skip subtree, or Reusable template. Choices are saved in browser storage per Penpot file and source layer ID; changing a choice requires preparing again. They do not modify the design or automatically transfer to another person's browser.
+
+- **Auto** keeps the normal fidelity policy. **Native** requests editable conversion and rejects geometry/effects that cannot be preserved; font substitutions remain reported. **Image** flattens that layer's visual subtree, retaining covered descendant geometry and controls.
+- **Layout only** omits the layer's own appearance and retains child content. **Skip subtree** omits the layer and descendants; previous imported instances are hidden and retained even with Hide removed disabled.
+- **Reusable template** replaces the source subtree with a clone of a mapped Roblox GuiObject. It takes placement, size, visibility, rotation and ordering from the design; appearance, children and scripts come from the template.
+
+An optional gameplay reference such as `UpgradeButton` generates **Penpot References** under the imported wrapper. Alternatively enable **Options → Generate gameplay references** for source-ID lookup without named aliases. Use a LocalScript in your game:
+
+```luau
+local wrapper = script.Parent
+local references = require(wrapper:WaitForChild("Penpot References"))
+local button = references.Get(wrapper, "UpgradeButton")
+button.Activated:Connect(function()
+    -- Your gameplay code goes here.
+end)
+-- references.Bind(wrapper) returns ById, Named, and Missing tables.
+```
+
+References use source IDs and survive renames and moves inside the wrapper. Rebind after an approved class/template replacement to obtain the new instance. Missing or duplicate identities produce explicit results/errors; this module does not write gameplay logic.
+
+In Studio, select your existing template GuiObject in Explorer, open **Options → Reusable UI templates**, enter a key such as `PrimaryButton`, and click **Map / refresh selected UI template**. Use the same key in Penpot. Mappings are stored in this place's ServerStorage registry, not on GitHub or in your helper. Clones preserve your template children and scripts and remove copied importer ownership attributes. Only use templates whose scripts you intend to run in the finished game. Mapping again refreshes its revision; existing clones are replaced only after reviewing and enabling **Allow object / template replacement**. Previous instances remain retained, with retired template scripts disabled to avoid duplicate execution. Ordinary reimports preserve clone identity and local edits.
+
+## Native linear-gradient colors
+
+The importer adds RGB-linear intermediate color samples to reduce the bright midpoint produced by the tested legacy Roblox UI renderer. Original authored stops and transparency are preserved, with a target of at most six color stops; existing sequences already above six keep their original stops. No additional UI objects or image uploads are needed. Colors remain an approximation, and complex geometry still uses images.
+
+Five Penpot-export comparisons in a Studio-hosted running client showed lower average channel error for red/blue, black/white, pastel, three-stop and varying-alpha gradients. This does not establish pixel-perfect output on every platform. Roblox documents advanced gradient types as requiring the **Upgraded UIGradients** Studio beta; this release continues using PNG fallback for advanced shapes rather than depending on users enabling a beta.
+
+## Previous update: 2.5.0
 
 Update the Studio plugin for Verify import and the optional native-grid toggle. Download the latest helper ZIP and prepare the design again to include Penpot grid metadata. Native grids are off by default. Close the old helper, extract the entire new ZIP, and run its launcher. Restart Studio and reopen the Penpot companion. If token export lacks permission, update or reinstall **Penpot to Roblox** from `http://127.0.0.1:43129/manifest.json` and approve library read access. Enter your own image upload key locally after a helper restart if needed.
 

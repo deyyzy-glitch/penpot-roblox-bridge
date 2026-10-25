@@ -1,11 +1,12 @@
 let doc,token,imageEditor,imageBusy=false,preparationId=0,preparationActive=false,preparationTimer;const el=id=>document.getElementById(id),status=s=>el('status').textContent=s;
 const parentOrigin=document.referrer?new URL(document.referrer).origin:'https://design.penpot.app';
-const post=(type,options)=>parent.postMessage({type,options,requestId:preparationId},parentOrigin);
+const post=(type,options,requestId=preparationId)=>parent.postMessage({type,options,requestId},parentOrigin);
+const layerEditor=globalThis.P2RLayerEditor?.create({post,status,invalidate:()=>{doc=undefined;imageEditor?.destroy();imageEditor=null;el('send').disabled=true;el('save').disabled=true;status('Layer choices changed. Prepare the selection again.')}});
 const optionElements=['text-mode','native-groups','behaviors','smoothing','tokens','runtime-themes','auto-tint'];
-const exportOptions=()=>({textMode:el('text-mode').value,nativeGroups:el('native-groups').checked,behaviors:el('behaviors').checked,smoothing:Number(el('smoothing').value),tokens:el('tokens').checked,runtimeThemes:el('runtime-themes').checked,autoTint:el('auto-tint').checked});
+const exportOptions=()=>({textMode:el('text-mode').value,nativeGroups:el('native-groups').checked,behaviors:el('behaviors').checked,smoothing:Number(el('smoothing').value),tokens:el('tokens').checked,runtimeThemes:el('runtime-themes').checked,autoTint:el('auto-tint').checked,...layerEditor?.options()});
 try{const saved=JSON.parse(localStorage.getItem('penpot-bridge-export-options')||'null');if(saved){if(['auto','live','exact'].includes(saved.textMode))el('text-mode').value=saved.textMode;el('native-groups').checked=saved.nativeGroups!==false;el('behaviors').checked=saved.behaviors===true;el('tokens').checked=saved.tokens!==false;el('runtime-themes').checked=saved.runtimeThemes===true;el('auto-tint').checked=saved.autoTint!==false;if([0,.6,1].includes(saved.smoothing))el('smoothing').value=String(saved.smoothing)}}catch{}
 for(const id of optionElements)el(id).onchange=()=>{doc=undefined;imageEditor?.destroy();imageEditor=null;el('send').disabled=true;el('save').disabled=true;try{localStorage.setItem('penpot-bridge-export-options',JSON.stringify(exportOptions()))}catch{}status('Options changed. Prepare the selection again.')};
-function preparing(value){el('export').disabled=value;for(const id of optionElements)el(id).disabled=value}
+function preparing(value){el('export').disabled=value;for(const id of optionElements)el(id).disabled=value;layerEditor?.setBusy(value)}
 function failPreparation(message){clearTimeout(preparationTimer);preparationActive=false;preparationId++;doc=undefined;preparing(false);el('send').disabled=true;el('save').disabled=true;status('Preparation failed: '+message)}
 function waiting(message,timeout=45000){status(message);clearTimeout(preparationTimer);preparationTimer=setTimeout(()=>failPreparation('No response while '+message+' Close and reopen Penpot Bridge, then try again. If it stops on the same layer, check whether that layer exports from Penpot itself.'),timeout)}
 const base64=bytes=>{let s='';for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(s)};
@@ -23,6 +24,7 @@ el('send').onclick=async()=>{try{await request('/document','POST',doc);status('S
 el('save').onclick=async()=>{try{await request('/document','POST',doc);const bundle=await request('/bundle');download('penpot-design.json',JSON.stringify(bundle));status('Portable bundle downloaded. It includes image pixels for automatic Roblox upload.')}catch(e){status(e.message)}};
 window.addEventListener('message',async e=>{
  if(e.source!==parent||e.origin!==parentOrigin)return;const m=e.data;
+ if(layerEditor?.onMessage(m))return;
  if(!preparationActive||m.requestId!==undefined&&m.requestId!==preparationId)return;
  const runId=preparationId;
  try{

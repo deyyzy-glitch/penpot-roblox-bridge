@@ -98,7 +98,7 @@ return function(plugin,Importer,Assets)
  end)
  local reviewSummary=label(reviewPage,'Load a design to see its changes.',0,58,19)
  local changeList=label(reviewPage,'',74,10,13,C.text);changeList.AutomaticSize=Enum.AutomaticSize.Y;changeList.TextYAlignment=Enum.TextYAlignment.Top
- local options={responsive=false,hideRemoved=false,force=false,allowClassChanges=false,nativeGrids=false}
+ local options={responsive=false,hideRemoved=false,force=false,allowClassChanges=false,nativeGrids=false,generateRefs=false}
  local previewPlan,document,token,target=nil,nil,nil,game:GetService('StarterGui')
  local lastImported,lastVerification
  local function clearVerification()
@@ -114,9 +114,11 @@ return function(plugin,Importer,Assets)
  end
  option('hideRemoved','Hide removed elements','Removed objects are retained so references and scripts stay intact.')
  option('nativeGrids','Use native uniform grids','Off by default. Compatible Penpot grids become UIGridLayout; irregular grids keep measured positions. Layout controls slot sizes and positions.')
+ option('generateRefs','Generate gameplay references','Adds a Penpot References module. Named references in Penpot enable it automatically. Connect gameplay from your own scripts.')
  option('force','Use design values','Overwrite local appearance changes. Explicit P2R_Locks still win.')
- option('allowClassChanges','Allow object type changes','Keep the old object and create its new type. Review references afterward.')
+ option('allowClassChanges','Allow object / template replacement','Keep the old object and create its new type or refreshed template. Review references afterward.')
  local advanced=button(settingsPage,'Advanced JSON & mappings',optionY,38,false)
+ local templateButton=button(settingsPage,'Reusable UI templates',optionY+50,38,false)
  local status=label(root,'Start with Setup to check the local connection.',0,44,12,C.muted);status.Position=UDim2.new(0,22,1,-108);status.Size=UDim2.new(1,-44,0,44)
  primary=button(root,'Review import',0,44,true);primary.Position=UDim2.new(0,22,1,-58);primary.Size=UDim2.new(1,-44,0,44)
  local overlay=create('Frame',root,{Name='Advanced',Size=UDim2.fromScale(1,1),BackgroundColor3=C.bg,Visible=false,ZIndex=20})
@@ -126,6 +128,16 @@ return function(plugin,Importer,Assets)
  local saveJSON=button(modal,'Use this JSON',0,44,true);saveJSON.Position=UDim2.new(0,0,1,-54);saveJSON.ZIndex=22
  local close=button(modal,'×',0,30,false);close.Position=UDim2.new(1,-34,0,0);close.Size=UDim2.fromOffset(34,30);close.ZIndex=22
  close.MouseButton1Click:Connect(function()overlay.Visible=false end)
+ local templateOverlay=create('Frame',root,{Name='Templates',Size=UDim2.fromScale(1,1),BackgroundColor3=C.bg,Visible=false,ZIndex=30})
+ local templateModal=create('Frame',templateOverlay,{Position=UDim2.fromOffset(22,22),Size=UDim2.new(1,-44,1,-44),BackgroundTransparency=1,ZIndex=31})
+ local templateTitle=label(templateModal,'Reusable UI templates',0,36,20);templateTitle.ZIndex=32
+ local templateHint=label(templateModal,'Select your UI template in Explorer, enter its key below, and map it. Use that same key for a Reusable template layer in Penpot.\n\nMappings stay in this place. Clones retain your authored children and scripts. Mapping again refreshes its revision; replacing imported clones requires Allow object / template replacement.',48,142,12,C.muted);templateHint.ZIndex=32
+ local templateKey=create('TextBox',templateModal,{Name='Template key',Position=UDim2.fromOffset(0,204),Size=UDim2.new(1,0,0,38),BackgroundColor3=C.card,BorderSizePixel=0,Text='',PlaceholderText='PrimaryButton',ClearTextOnFocus=false,FontFace=Font.fromEnum(Enum.Font.BuilderSans),TextSize=14,TextColor3=C.text,ZIndex=32});round(templateKey,10)
+ local mapTemplate=button(templateModal,'Map / refresh selected UI template',254,44,true);mapTemplate.ZIndex=32
+ local templateList=create('ScrollingFrame',templateModal,{Name='Template mappings',Position=UDim2.fromOffset(0,316),Size=UDim2.new(1,0,1,-332),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,AutomaticCanvasSize=Enum.AutomaticSize.Y,CanvasSize=UDim2.new(),ZIndex=32})
+ local templateMappings=label(templateList,'',0,0,12,C.muted);templateMappings.AutomaticSize=Enum.AutomaticSize.Y;templateMappings.Size=UDim2.new(1,-10,0,0);templateMappings.TextYAlignment=Enum.TextYAlignment.Top;templateMappings.ZIndex=32
+ local closeTemplates=button(templateModal,'×',0,30,false);closeTemplates.Position=UDim2.new(1,-34,0,0);closeTemplates.Size=UDim2.fromOffset(34,30);closeTemplates.ZIndex=32
+ closeTemplates.MouseButton1Click:Connect(function()templateOverlay.Visible=false end)
  local busy=false
  local function show(s,errorState)status.Text=s;status.TextColor3=errorState and C.amber or C.muted end
  local function guard(fn)
@@ -133,6 +145,14 @@ return function(plugin,Importer,Assets)
   local ok,e=pcall(fn);busy=false;primary.Active=true
   if not ok then show(tostring(e):gsub('^.-:%d+: ',''),true);warn('[Penpot Bridge] '..tostring(e))end
  end
+ local function refreshTemplates()
+  local lines={};for key,value in Importer.getTemplates()do table.insert(lines,key..' → '..value.instance:GetFullName())end;table.sort(lines)
+  templateMappings.Text=#lines>0 and table.concat(lines,'\n\n')or 'No templates mapped yet.'
+ end
+ templateButton.MouseButton1Click:Connect(function()guard(function()refreshTemplates();templateOverlay.Visible=true end)end)
+ mapTemplate.MouseButton1Click:Connect(function()guard(function()
+  Importer.mapTemplate(templateKey.Text,Selection:Get()[1]);previewPlan=nil;refreshTemplates();show('Template mapping saved. Review the design before importing refreshed templates.')
+ end)end)
  local function checkConnection()
   helperState.Text='Checking the helper on this PC…'
   local ok,value=pcall(function()token=Assets.connect();return Assets.status(token)end)
