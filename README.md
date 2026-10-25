@@ -2,6 +2,17 @@
 
 Import Penpot layers, groups, and boards into Roblox Studio UI, review changes, and synchronize updates while preserving local edits and native object references. Open source under the MIT license.
 
+## Helper connection and upload key are separate
+
+| Part | When you need it |
+| --- | --- |
+| **Local helper** | Keep it running to install/open the Penpot plugin and transfer designs to Studio, including designs with no images. |
+| **Roblox Assets Read/Write key** | Only when the helper must upload **new image assets** to Roblox. It is not required to connect, install the Penpot plugin, prepare a design, or send/receive it. |
+
+**You can leave image setup closed and continue without a key.** In Penpot, use **Prepare selection → Send to Studio**; in Studio, use **Receive from Penpot → Review import → Import design**. Native UI designs need no image-upload key. If the import requires new image uploads, configure that optional capability when prompted.
+
+“Images” includes PNG fallbacks generated for some vectors, unsupported fonts, gradients, and effects, not just photos placed in Penpot. Existing uploaded assets may be reused. Closing the helper stops transfers; leaving the key blank does not. The finished Roblox game does not need either.
+
 ## Get started on Windows
 
 1. Install [Penpot Bridge in Roblox Studio](https://create.roblox.com/store/asset/129957195606923).
@@ -13,9 +24,13 @@ Import Penpot layers, groups, and boards into Roblox Studio UI, review changes, 
 
 If Roblox asks to contact **127.0.0.1**, it is asking to contact the helper on your own PC. Allow that connection to transfer designs. Your finished game does not need the helper.
 
-The Windows download is a portable application, not an installer or a tray app. It does not automatically start at login. Run its launcher again after restarting your computer. Each person runs their own helper and uses their own Roblox credentials. No developer key is bundled.
+The Windows download is a portable application, not an installer or a tray app. It does not automatically start at login. Run its launcher again after restarting your computer. Each person runs their own helper. Only creators uploading new images through it need to configure their own Roblox key. No developer key is bundled.
 
-## Updating to 2.7.0
+## Updating to 2.7.2
+
+The latest helper separates **Design transfer — no key required** from **New image uploads — optional setup**. Download the latest Windows helper, close the old copy, and launch the newly extracted copy. The Studio plugin remains the working 2.7.1 build; this patch changes helper guidance, not conversion behavior.
+
+## Previous interface update: 2.7.0
 
 Update the Studio plugin and download the latest portable helper for the redesigned interfaces. Both companions now have **Settings → Appearance → Dark / Light** with blue accents and a locally saved preference. Studio separates Import, Review, Verify, Templates, Settings, and Connection; narrow panels use a compact sidebar and wrapping settings rows. The permanent bottom status strip is removed.
 

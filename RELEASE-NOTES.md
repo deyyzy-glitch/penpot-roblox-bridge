@@ -1,3 +1,12 @@
+# Penpot Bridge 2.7.2 — helper setup clarity
+
+- Separated required local-helper connection from optional Roblox image-upload authorization. The setup page now shows design-transfer readiness first and keeps the key form inside a closed optional image-upload section.
+- Replaced “Verify & connect” with “Enable image uploads.” Missing or unavailable upload setup no longer reads as a missing local connection.
+- Clarified the README and Penpot Connection status: the helper must run for transfers, including image-free designs; an upload key is only needed when the helper must upload new image assets. Unsupported fonts and effects can generate those images.
+- Added regression checks for transfer/bundle download without configuring a key and for separate setup-page connection/upload states. All 54 Node tests pass.
+
+This is a helper/documentation update. The Studio plugin remains the working 2.7.1 build; no Studio conversion behavior changes in this release.
+
 # Penpot Bridge 2.7.1
 
 - Corrected the public Studio plugin entry script's disabled state so enabling the installed plugin starts its toolbar. The 2.7.0 public asset was published with the entry script disabled; generated GitHub model files already had an enabled entry point.
