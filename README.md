@@ -2,6 +2,8 @@
 
 Import Penpot layers, groups, and boards into Roblox Studio UI, review changes, and synchronize updates while preserving local edits and native object references. Open source under the MIT license.
 
+**2.7.4:** fixes duplicated text in background image exports and small alignment errors in nested icons, circular backdrops and badges. Update both the helper and Studio plugin, reopen the Penpot companion, then prepare/send/receive/import the design again. See the [release notes](RELEASE-NOTES.md).
+
 ## Helper connection and upload key are separate
 
 | Part | When you need it |

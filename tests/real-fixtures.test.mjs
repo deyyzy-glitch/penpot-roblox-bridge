@@ -30,8 +30,14 @@ test('captured SVG export preserves local raster padding, omitted definitions an
  assert.equal(bars.length,3);assert.deepEqual(bars[0].rasterBounds,{x:-2,y:-2,width:19,height:25});
  const thin=nodes.find(n=>n.height===.01);assert.ok(thin.rasterBounds.height>6);assert.equal(thin.tintColor,'#044895');
 });
+test('captured machine icon retains fractional nested geometry and stroke padding',async()=>{
+ const d=await load('machine-icon'),nodes=flatten(d.design),icon=nodes.find(n=>n.name==='Molder cartoon machine icon'),circle=nodes.find(n=>n.name.includes('circular icon background'));
+ assert.ok(Math.abs(icon.x-12.8)<1e-6);assert.ok(Math.abs(icon.width-26.4)<1e-6);assert.ok(Math.abs(circle.width-35.2)<1e-6);
+ const group=icon.children.find(n=>n.name==='svg-g');assert.equal(group.x,4.125);assert.ok(group.children.every(n=>n.rasterBounds.x<0));
+});
+
 test('real fixtures are standalone and contain no original IDs, uploaded IDs or pixels',async()=>{
- for(const name of ['mine-panel','svg-chart']){
+ for(const name of ['mine-panel','svg-chart','machine-icon']){
   const d=await load(name),nodes=flatten(d.design),ids=new Set(nodes.map(n=>n.id));
   assert.equal(ids.size,nodes.length);assert.equal(d.source.rootId,d.design.id);
   for(const a of d.assets){assert.ok(ids.has(a.shapeId));assert.ok(nodes.some(n=>n.assetKey===a.key));assert.equal(d.assetMap[a.key],'rbxassetid://0');assert.equal(a.bytes,undefined);assert.equal(a.contentHash,undefined)}

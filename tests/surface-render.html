@@ -1,0 +1,29 @@
+<!doctype html><meta charset="utf-8"><title>Background isolation regression</title>
+<script src="/image-editor.js"></script>
+<h1>Background isolation regression</h1><button id="run">Run render checks</button><pre id="result">Ready</pre>
+<script>
+document.getElementById('run').onclick=async()=>{
+ const results=[];const check=(condition,message)=>{if(!condition)throw Error(message)};
+ const test=async(name,run)=>{try{await run();results.push({name,passed:true})}catch(e){results.push({name,passed:false,error:e.message})}};
+ const defs='<defs><linearGradient id="paint"><stop stop-color="#398fc3"/><stop offset="1" stop-color="#276b9b"/></linearGradient><clipPath id="clip"><rect width="288" height="48" rx="14"/></clipPath></defs>';
+ const background='<g clip-path="url(#clip)"><rect width="288" height="48" fill="url(#paint)"/><rect x="1" y="1" width="286" height="46" rx="13" fill="none" stroke="#8ecbe9" stroke-width="2"/></g>';
+ const wrap=content=>'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 288 48">'+defs+'<g id="shape-panel">'+content+'</g></svg>';
+ const polluted=wrap(background+'<style>@font-face{font-family:Nunito;src:url(https://example.invalid/nunito.woff2)}</style><g id="shape-label"><text x="50" y="20" font-family="Nunito">Spawner</text></g><g id="shape-icon"><rect width="40" height="40" fill="#ff0000"/><g id="shape-nested"><path d="M0 0h288v48H0Z" fill="#00ff00"/></g></g>');
+ const asset=svg=>({name:'Spawner upgrade',svgBytes:new TextEncoder().encode(svg),viewBox:[0,0,288,48],surfaceShapeId:'panel',omitShapeIds:['label','icon','nested']});
+ const pixels=async bytes=>{const bitmap=await createImageBitmap(new Blob([bytes],{type:'image/png'})),canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0);bitmap.close();return {canvas,data:ctx.getImageData(0,0,canvas.width,canvas.height).data}};
+ await test('Background pixels match a child-free reference; gradient, stroke and clip survive',async()=>{
+  const actual=await P2RImageEditor.rasterizeSVG(asset(polluted)),expected=await P2RImageEditor.rasterizeSVG({...asset(wrap(background)),omitShapeIds:[]});
+  const a=await pixels(actual.bytes),b=await pixels(expected.bytes);check(a.data.length===b.data.length,'image dimensions changed');let differences=0;for(let i=0;i<a.data.length;i++)if(a.data[i]!==b.data[i])differences++;check(differences===0,differences+' pixel channels differ');check(a.data[3]===0,'rounded corner was lost');check(a.data[(48*576+288)*4+3]>0,'background disappeared');document.body.append(a.canvas);
+ });
+ await test('Unknown SVG structure fails instead of silently baking duplicate children',async()=>{
+  try{await P2RImageEditor.rasterizeSVG(asset(polluted.replace('id="shape-panel"','id="unknown"')))}catch(e){check(/did not identify the background/.test(e.message),e.message);return}throw Error('unidentified surface was accepted');
+ });
+ await test('Whole-subtree text remains subject to normal rendering checks',async()=>{
+  try{await P2RImageEditor.rasterizeSVG({...asset(polluted),omitShapeIds:[]})}catch(e){check(/external font|text, animation/.test(e.message),e.message);return}throw Error('text was silently removed');
+ });
+ await test('External resources still fail safely after child removal',async()=>{
+  try{await P2RImageEditor.rasterizeSVG(asset(wrap(background+'<image href="https://example.invalid/image.png"/>')))}catch(e){check(/not embedded/.test(e.message),e.message);return}throw Error('external image was accepted');
+ });
+ document.getElementById('result').textContent=JSON.stringify({passed:results.filter(r=>r.passed).length,total:results.length,results},null,2);
+};
+</script>

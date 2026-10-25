@@ -156,6 +156,18 @@ function Importer.validate(d)
  for _,target in actions do assert(panels[target],'Panel action target does not exist: '..target) end
  return count
 end
+-- UDim offsets are integers. Keep the subpixel remainder in the scale field
+-- instead of truncating it at every nested SVG container and image surface.
+-- At the authored parent size this resolves to the exact design coordinate;
+-- on resize only the remainder (at most half a pixel) follows the parent.
+local function preciseUDim2(xs,xo,ys,yo,parentWidth,parentHeight)
+ local function axisValue(scale,offset,reference)
+  local whole=math.round(offset);local fraction=offset-whole
+  if reference and reference>0 and math.abs(fraction)>0.000001 then scale+=fraction/reference end
+  return UDim.new(scale,whole)
+ end
+ return UDim2.new(axisValue(xs,xo,parentWidth),axisValue(ys,yo,parentHeight))
+end
 local function axis(pos,size,parentSize,constraint)
  if constraint=='right' or constraint=='bottom' then return 1,pos-parentSize,0,size end
  if constraint=='center' then return .5,pos-parentSize/2,0,size end
@@ -229,7 +241,7 @@ local function descriptors(d,options)
   local scroll=n.scroll==true and d.options and d.options.behaviors==true
   if n.importMode=='template'then
    local template,revision=Templates.resolve(options,n.template)
-   local props={Name=n.name,Position=UDim2.fromOffset(parent and n.x or 0,parent and n.y or 0),Size=UDim2.fromOffset(n.width,n.height),AnchorPoint=Vector2.zero,Rotation=n.rotation,Visible=n.visible~=false,ZIndex=z,LayoutOrder=z}
+   local props={Name=n.name,Position=preciseUDim2(0,parent and n.x or 0,0,parent and n.y or 0,parentNode and parentNode.width,parentNode and parentNode.height),Size=preciseUDim2(0,n.width,0,n.height,parentNode and parentNode.width,parentNode and parentNode.height),AnchorPoint=Vector2.zero,Rotation=n.rotation,Visible=n.visible~=false,ZIndex=z,LayoutOrder=z}
    if parent and grids[parent]then props.LayoutOrder=grids[parent].order[n.id]end
    if parentNode and parentNode.layout and parentNode.layout.native and (not parentNode.assetKey or nativeVisual(parentNode,capabilities))then
     local axisName=parentNode.layout.dir=='row'and'x'or'y';props.LayoutOrder=0
@@ -274,7 +286,7 @@ local function descriptors(d,options)
     if (wrap and sibling[cross]<n[cross]-.1) or ((not wrap or math.abs(sibling[cross]-n[cross])<.1) and (sibling[axisName]<n[axisName] or (sibling[axisName]==n[axisName] and sibling.id<n.id)))then layoutOrder+=1 end
    end
   end
-  local p={Name=n.name,Position=UDim2.new(psx,px,psy,py),Size=UDim2.new(ssx,sx,ssy,sy),AnchorPoint=Vector2.zero,
+  local p={Name=n.name,Position=preciseUDim2(psx,px,psy,py,parentNode and parentNode.width,parentNode and parentNode.height),Size=preciseUDim2(ssx,sx,ssy,sy,parentNode and parentNode.width,parentNode and parentNode.height),AnchorPoint=Vector2.zero,
    Rotation=n.rotation,Visible=n.visible~=false,BorderSizePixel=0,ZIndex=z,LayoutOrder=layoutOrder,
    BackgroundColor3=f and f.fillColor and color(f.fillColor) or Color3.new(1,1,1),
    BackgroundTransparency=(text or raster or n.smooth or n.visualSuppressed or not f) and 1 or 1-opacity*(f.fillOpacity or 1),
@@ -341,10 +353,10 @@ local function descriptors(d,options)
   if raster then
    local asset=(d.assetMap or {})[n.assetKey]
    local b=n.rasterBounds or {x=0,y=0,width=n.width,height=n.height}
-   local sp={Name='Penpot Visual Surface',BackgroundTransparency=1,BorderSizePixel=0,Position=UDim2.fromOffset(b.x,b.y),Size=UDim2.new(1,b.width-n.width,1,b.height-n.height),Image=asset or '',ImageColor3=n.tintColor and color(n.tintColor)or Color3.new(1,1,1),ImageTransparency=1-inheritedOpacity,ScaleType=Enum.ScaleType.Stretch,ZIndex=z,Visible=not n.visualSuppressed}
+   local sp={Name='Penpot Visual Surface',BackgroundTransparency=1,BorderSizePixel=0,Position=preciseUDim2(0,b.x,0,b.y,n.width,n.height),Size=preciseUDim2(1,b.width-n.width,1,b.height-n.height,n.width,n.height),Image=asset or '',ImageColor3=n.tintColor and color(n.tintColor)or Color3.new(1,1,1),ImageTransparency=1-inheritedOpacity,ScaleType=Enum.ScaleType.Stretch,ZIndex=z,Visible=not n.visualSuppressed}
    if n.slice then local s=n.slice.rect;sp.ScaleType=Enum.ScaleType.Slice;sp.SliceCenter=Rect.new(s[1],s[2],s[3],s[4]);sp.SliceScale=n.slice.scale end
    add(n.id..'::surface',n.id,'ImageLabel',sp)
-   if n.glow then local g=n.glow;local b=g.bounds;add(n.id..'::glow',n.id,'ImageLabel',{Name='Penpot Silhouette Glow',BackgroundTransparency=1,BorderSizePixel=0,Position=UDim2.fromOffset(b.x,b.y),Size=UDim2.new(1,b.width-n.width,1,b.height-n.height),Image=(d.assetMap or {})[g.key]or '',ImageColor3=color(g.color),ImageTransparency=1-inheritedOpacity*g.opacity,ScaleType=Enum.ScaleType.Stretch,ZIndex=z-1,Visible=not n.visualSuppressed})end
+   if n.glow then local g=n.glow;local b=g.bounds;add(n.id..'::glow',n.id,'ImageLabel',{Name='Penpot Silhouette Glow',BackgroundTransparency=1,BorderSizePixel=0,Position=preciseUDim2(0,b.x,0,b.y,n.width,n.height),Size=preciseUDim2(1,b.width-n.width,1,b.height-n.height,n.width,n.height),Image=(d.assetMap or {})[g.key]or '',ImageColor3=color(g.color),ImageTransparency=1-inheritedOpacity*g.opacity,ScaleType=Enum.ScaleType.Stretch,ZIndex=z-1,Visible=not n.visualSuppressed})end
    if not asset then warn(n,'Missing Roblox image asset: '..n.assetKey..'. Upload pending images before importing.') end
   end
   if n.smooth and not n.visualSuppressed then

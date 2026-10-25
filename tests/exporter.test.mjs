@@ -40,6 +40,19 @@ test('local markup does not accidentally include children in an own-surface expo
  assert.equal(calls,1);
 });
 
+test('own-surface backgrounds never trust PNG skipChildren to exclude editable descendants',async()=>{
+ const calls=[],text=shape('machine-name','text',{characters:'Spawner',fontFamily:'Nunito',fontWeight:900}),icon=shape('icon','group',{children:[shape('icon-path','path')]}),svg='<svg viewBox="0 0 288 48"><g id="shape-panel"><rect width="288" height="48"/><g id="shape-machine-name"><text>Spawner</text></g><g id="shape-icon"><path/></g></g></svg>';
+ const panel=shape('panel','board',{children:[text,icon],export:async options=>{calls.push(options.type);return new TextEncoder().encode(options.type==='svg'?svg:'PNG containing duplicate text')}});
+ const [asset]=await sandbox.P2R.exportAssets({document:{assets:[{shapeId:'panel',name:'Spawner upgrade',skipChildren:true}]},shapes:new Map([['panel',panel]])});
+ assert.deepEqual(calls,['svg']);assert.equal(asset.bytes,undefined);assert.equal(asset.surfaceShapeId,'panel');assert.deepEqual(Array.from(asset.omitShapeIds),['machine-name','icon','icon-path']);assert.equal(new TextDecoder().decode(new Uint8Array(asset.svgBytes)),svg);
+});
+
+test('intentional subtree images retain their children instead of isolating the background',async()=>{
+ const calls=[],panel=shape('panel','board',{children:[shape('text','text')],export:async options=>{calls.push(options.type);return new TextEncoder().encode(options.type==='svg'?'<svg viewBox="0 0 100 50"><text>Whole group</text></svg>':'whole group PNG')}});
+ const [asset]=await sandbox.P2R.exportAssets({document:{assets:[{shapeId:'panel',name:'Whole group',skipChildren:false}]},shapes:new Map([['panel',panel]])});
+ assert.deepEqual(calls,['svg','png']);assert.ok(asset.bytes);assert.equal(asset.omitShapeIds,undefined);
+});
+
 test('unresponsive image exports stop with layer context and progress',async()=>{
  const vector=shape('stuck','path',{name:'Stuck icon',export:()=>new Promise(()=>{})});
  const bundle=sandbox.P2R.exportSelection(api(shape('root','board',{children:[vector]}))),progress=[];
@@ -78,6 +91,25 @@ test('PNG timeout retains its SVG as a fallback and records the original error',
  const surface=shape('panel','rectangle',{blur:{value:2},export:async({type})=>type==='png'?new Promise(()=>{}):new TextEncoder().encode('<svg viewBox="0 0 100 50"><image href="data:image/png;base64,AA=="/></svg>')});
  const bundle=sandbox.P2R.exportSelection(api(shape('root','board',{children:[surface]}))),[asset]=await sandbox.P2R.exportAssets(bundle,{timeoutMs:5});
  assert.ok(asset.svgBytes.length>0);assert.match(asset.pngError,/panel.*PNG.*did not respond/);
+});
+
+test('a transient PNG http error retries once with identical bounds and export options',async()=>{
+ const calls=[],progress=[];const svg='<svg viewBox="0 0 288 48"><style>@font-face{font-family:Nunito;src:url(https://example.invalid/font.woff2)}</style></svg>';
+ const surface=shape('upgrade','board',{name:'Spawner upgrade',width:288,height:48,blur:{value:2},export:async options=>{calls.push({...options});if(options.type==='svg')return new TextEncoder().encode(svg);if(calls.filter(c=>c.type==='png').length===1)throw Error('http error');return new Uint8Array([137,80,78,71])}});
+ const [asset]=await sandbox.P2R.exportAssets(sandbox.P2R.exportSelection(api(surface)),{retryDelayMs:0,onProgress:s=>progress.push(s)});
+ const pngs=calls.filter(c=>c.type==='png');assert.equal(pngs.length,2);assert.deepEqual(pngs[0],pngs[1]);assert.deepEqual(Array.from(asset.bytes),[137,80,78,71]);assert.equal(asset.svgBytes,undefined);assert.equal(progress.filter(s=>s.startsWith('Retrying PNG')).length,1);
+});
+
+test('repeated PNG http errors remain bounded and preserve SVG fallback context',async()=>{
+ let attempts=0;const surface=shape('upgrade','board',{blur:{value:2},export:async({type})=>{if(type==='svg')return new TextEncoder().encode('<svg viewBox="0 0 100 50"><text>Test</text></svg>');attempts++;throw Error('http error')}});
+ const [asset]=await sandbox.P2R.exportAssets(sandbox.P2R.exportSelection(api(surface)),{retryDelayMs:0});
+ assert.equal(attempts,2);assert.ok(asset.svgBytes.length);assert.match(asset.pngError,/upgrade.*PNG.*http error/);
+});
+
+test('a timed-out PNG job is not submitted a second time',async()=>{
+ let attempts=0;const surface=shape('upgrade','board',{blur:{value:2},export:async({type})=>{if(type==='svg')return new TextEncoder().encode('<svg viewBox="0 0 100 50"><text>Test</text></svg>');attempts++;return new Promise(()=>{})}});
+ const [asset]=await sandbox.P2R.exportAssets(sandbox.P2R.exportSelection(api(surface)),{timeoutMs:5,retryDelayMs:0});
+ assert.equal(attempts,1);assert.match(asset.pngError,/did not respond/);
 });
 
 test('Fredoka remains editable with a declared Fredoka One substitution',()=>{

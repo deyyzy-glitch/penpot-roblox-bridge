@@ -214,7 +214,7 @@ globalThis.P2R = (() => {
     }
     return {document,shapes,generateMarkup:markupFor};
   }
-  async function exportAssets(bundle,{timeoutMs=30000,onProgress=()=>{}}={}) {
+  async function exportAssets(bundle,{timeoutMs=30000,retryDelayMs=500,onProgress=()=>{}}={}) {
     const result=[];
     for(const a of bundle.document.assets) {
       if(a.kind==='smooth'){result.push({...a});continue;}
@@ -245,12 +245,32 @@ globalThis.P2R = (() => {
       if(viewBox.length!==4||!viewBox.every(Number.isFinite)||viewBox[2]<=0||viewBox[3]<=0)throw Error('Invalid SVG bounds: '+a.name);
       if(localMarkup){viewBox[0]-=shape.x;viewBox[1]-=shape.y;}
       const surface={...a,viewBox,shapeWidth:shape.width,shapeHeight:shape.height,rotation:shape.rotation||0};
+      if(a.skipChildren&&shape.children?.length){
+        // Some Penpot renderers return the entire subtree even with skipChildren.
+        // A PNG cannot be inspected or separated afterwards. Isolate the named
+        // SVG shape wrappers in the companion before rendering the background.
+        const omitShapeIds=[];const collect=s=>{omitShapeIds.push(s.id);for(const child of s.children||[])collect(child)};
+        for(const child of shape.children)collect(child);
+        result.push({...surface,svgBytes:Array.from(svg),surfaceShapeId:shape.id,omitShapeIds});continue;
+      }
       // Self-contained vectors can be rasterized in the companion without a second remote render.
       // Only inspect ASCII markup here; preserve the original UTF-8 bytes for the UI renderer.
       // Penpot's plugin sandbox does not expose browser TextDecoder constructors.
       const svgText=Array.from(svg,byte=>String.fromCharCode(byte)).join(''),localVector=shape.type!=='text'&&!/<(?:[\w-]+:)?(?:text|tspan|textPath|image|foreignObject)\b/i.test(svgText)&&!/@import|(?:https?:|\/\/)/i.test(svgText.replace(/\sxmlns(?::[\w-]+)?\s*=\s*(['"])[\s\S]*?\1/g,''));
       if(localVector){result.push({...surface,svgBytes:Array.from(svg),renderWarning:a.name+': vector rendered locally from its SVG.'});continue;}
-      try{const bytes=await exportLayer({type:'png',scale,skipChildren:a.skipChildren});result.push({...surface,bytes:Array.from(bytes)});}
+      try{
+        let bytes;
+        try{bytes=await exportLayer({type:'png',scale,skipChildren:a.skipChildren});}
+        catch(error){
+          // Exports are read-only. Retry one transient renderer/network failure, never a timed-out job.
+          const message=String(error.message||error);
+          if(/did not respond|timed?\s*out/i.test(message)||!/http error|http\s*(?:408|429|5\d\d)|network|fetch/i.test(message))throw error;
+          onProgress('Retrying PNG export (2/2): '+a.name);
+          await new Promise(resolve=>setTimeout(resolve,retryDelayMs));
+          bytes=await exportLayer({type:'png',scale,skipChildren:a.skipChildren});
+        }
+        result.push({...surface,bytes:Array.from(bytes)});
+      }
       catch(error){onProgress('Using SVG fallback: '+a.name);result.push({...surface,svgBytes:Array.from(svg),renderWarning:a.name+': Penpot PNG export failed; trying the self-contained SVG locally.',pngError:error.message});}
     }
     return result;

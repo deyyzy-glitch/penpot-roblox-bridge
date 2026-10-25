@@ -1,3 +1,12 @@
+# Penpot Bridge 2.7.4 — clean backgrounds and aligned icons
+
+- Background-only surfaces explicitly remove descendant SVG wrappers before rendering. Some Penpot export paths include those children despite `skipChildren`, causing editable labels and icons to appear twice. Whole-subtree image conversions retain their original behavior; unknown SVG structure fails explicitly.
+- Removed font declarations belonging to excluded text from isolated backgrounds, while retaining external-resource checks. Transient remote PNG HTTP failures receive one bounded retry; timed-out jobs are not resubmitted.
+- Studio preserves fractional geometry using UDim scale remainders instead of truncating every nested offset. This corrects cumulative icon/path displacement, circular backdrop sizes, level badges and raster padding. At authored dimensions the geometry is exact; on resize only the remainder (at most half a design pixel per component) follows the parent.
+- Validation: 64 Node tests, four browser rendering checks including an exact pixel comparison, and 40 Studio checks covering captured machine geometry, reimport, the verifier and native grids.
+
+Update both the Studio plugin and helper for these fixes. Close the old helper before starting the new download, then close and reopen Penpot Bridge in Penpot. Prepare and send the design again, then receive and import it in Studio. Existing imports keep their old geometry until reimported with the updated plugin. The read-only verifier checks instance state, not text or artwork baked into image pixels.
+
 # Penpot Bridge 2.7.3 — friendly duplicate launches
 
 - Opening a second helper now identifies the running Penpot Bridge, opens its existing status page, and explains that the original helper remains running. There is no unhandled EADDRINUSE crash.

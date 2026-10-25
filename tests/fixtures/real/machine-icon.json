@@ -1,0 +1,954 @@
+{
+  "format": "penpot-roblox",
+  "version": 4,
+  "source": {
+    "fileId": "real-regression",
+    "pageId": "captured-demo",
+    "rootId": "machine-0"
+  },
+  "design": {
+    "id": "machine-0",
+    "name": "Molder upgrade",
+    "type": "board",
+    "x": 0,
+    "y": 0,
+    "width": 288,
+    "height": 48,
+    "rotation": 0,
+    "opacity": 1,
+    "visible": true,
+    "clip": false,
+    "radius": 14,
+    "radii": [
+      14,
+      14,
+      14,
+      14
+    ],
+    "shadows": [],
+    "nativeVisual": false,
+    "fills": [
+      {
+        "fillColor": null,
+        "fillOpacity": null,
+        "fillColorGradient": {
+          "type": "linear",
+          "startX": 0,
+          "startY": 0,
+          "endX": 1,
+          "endY": 1,
+          "width": 1,
+          "stops": [
+            {
+              "color": "#ec5f8c",
+              "opacity": null,
+              "offset": 0
+            },
+            {
+              "color": "#c1406d",
+              "opacity": null,
+              "offset": 1
+            }
+          ]
+        }
+      }
+    ],
+    "strokes": [
+      {
+        "strokeColor": "#f48bad",
+        "strokeOpacity": 0.85,
+        "strokeStyle": "solid",
+        "strokeWidth": 2,
+        "strokeAlignment": "inner",
+        "strokeCapStart": null,
+        "strokeCapEnd": null,
+        "strokeColorGradient": null
+      }
+    ],
+    "constraints": {
+      "horizontal": "left",
+      "vertical": "top"
+    },
+    "assetKey": "fixture:machine-0",
+    "rasterSurface": true,
+    "rasterSubtree": false,
+    "visualSuppressed": false,
+    "rasterOpacityBaked": true,
+    "button": false,
+    "nativeGroup": false,
+    "children": [
+      {
+        "id": "machine-1",
+        "name": "Molder circular icon background",
+        "type": "ellipse",
+        "x": 8.399999999999999,
+        "y": 2.0000000000000284,
+        "width": 35.2,
+        "height": 35.19999999999999,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": null,
+            "fillOpacity": null,
+            "fillColorGradient": {
+              "type": "linear",
+              "startX": 0,
+              "startY": 0,
+              "endX": 1,
+              "endY": 1,
+              "width": 1,
+              "stops": [
+                {
+                  "color": "#f48bad",
+                  "opacity": null,
+                  "offset": 0
+                },
+                {
+                  "color": "#ee709b",
+                  "opacity": null,
+                  "offset": 1
+                }
+              ]
+            }
+          }
+        ],
+        "strokes": [
+          {
+            "strokeColor": "#f48bad",
+            "strokeOpacity": null,
+            "strokeStyle": "solid",
+            "strokeWidth": 2,
+            "strokeAlignment": "inner",
+            "strokeCapStart": null,
+            "strokeCapEnd": null,
+            "strokeColorGradient": null
+          }
+        ],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "assetKey": "fixture:machine-1",
+        "rasterSurface": true,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": true,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "rasterBounds": {
+          "x": 0,
+          "y": 0,
+          "width": 35.2,
+          "height": 35.2
+        }
+      },
+      {
+        "id": "machine-2",
+        "name": "Machine name",
+        "type": "text",
+        "x": 54,
+        "y": 4,
+        "width": 136,
+        "height": 22,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#fff3dc",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "Molder",
+          "size": 14,
+          "family": "Nunito",
+          "robloxFamily": "Nunito",
+          "fontSubstituted": false,
+          "weight": 900,
+          "italic": false,
+          "align": "left",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 48.140625,
+          "measuredHeight": 19
+        }
+      },
+      {
+        "id": "machine-3",
+        "name": "Stats",
+        "type": "text",
+        "x": 54,
+        "y": 26,
+        "width": 136,
+        "height": 16,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#f0e2cc",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "0.72s | Luck 1.75",
+          "size": 9,
+          "family": "Nunito",
+          "robloxFamily": "Nunito",
+          "fontSubstituted": false,
+          "weight": 700,
+          "italic": false,
+          "align": "left",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 70.421875,
+          "measuredHeight": 12
+        }
+      },
+      {
+        "id": "machine-4",
+        "name": "Upgrade button",
+        "type": "rectangle",
+        "x": 196,
+        "y": 7,
+        "width": 83,
+        "height": 34,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 7,
+        "radii": [
+          7,
+          7,
+          7,
+          7
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#be3f6d",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": []
+      },
+      {
+        "id": "machine-5",
+        "name": "Upgrade action",
+        "type": "text",
+        "x": 199,
+        "y": 10,
+        "width": 77,
+        "height": 13,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#fff3dc",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "Upgrade",
+          "size": 10,
+          "family": "Nunito",
+          "robloxFamily": "Nunito",
+          "fontSubstituted": false,
+          "weight": 900,
+          "italic": false,
+          "align": "center",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 41.671875,
+          "measuredHeight": 14
+        }
+      },
+      {
+        "id": "machine-6",
+        "name": "Price",
+        "type": "text",
+        "x": 199,
+        "y": 23,
+        "width": 77,
+        "height": 14,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#fff3dc",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "$12,441",
+          "size": 11,
+          "family": "Nunito",
+          "robloxFamily": "Nunito",
+          "fontSubstituted": false,
+          "weight": 900,
+          "italic": false,
+          "align": "center",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 42.59375,
+          "measuredHeight": 15
+        }
+      },
+      {
+        "id": "machine-7",
+        "name": "Molder cartoon machine icon",
+        "type": "group",
+        "x": 12.800000000000006,
+        "y": 5.5,
+        "width": 26.399999999999988,
+        "height": 26.399999999999977,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [
+          {
+            "id": "machine-8",
+            "name": "base-background",
+            "type": "rectangle",
+            "x": 0,
+            "y": 0,
+            "width": 26.399999999999988,
+            "height": 26.399999999999977,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": false,
+            "clip": false,
+            "radius": 0,
+            "radii": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "shadows": [],
+            "nativeVisual": false,
+            "fills": [],
+            "strokes": [],
+            "constraints": {
+              "horizontal": "left",
+              "vertical": "top"
+            },
+            "rasterSurface": false,
+            "rasterSubtree": false,
+            "visualSuppressed": false,
+            "rasterOpacityBaked": false,
+            "button": false,
+            "nativeGroup": false,
+            "children": []
+          },
+          {
+            "id": "machine-9",
+            "name": "svg-g",
+            "type": "group",
+            "x": 4.125,
+            "y": 2.474999999999966,
+            "width": 18.149999999999988,
+            "height": 21.450000000000045,
+            "rotation": 0,
+            "opacity": 1,
+            "visible": true,
+            "clip": false,
+            "radius": 0,
+            "radii": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "shadows": [],
+            "nativeVisual": false,
+            "fills": [],
+            "strokes": [],
+            "constraints": {
+              "horizontal": "left",
+              "vertical": "top"
+            },
+            "rasterSurface": false,
+            "rasterSubtree": false,
+            "visualSuppressed": false,
+            "rasterOpacityBaked": false,
+            "button": false,
+            "nativeGroup": false,
+            "children": [
+              {
+                "id": "machine-10",
+                "name": "svg-path",
+                "type": "path",
+                "x": 0,
+                "y": 17.325000000000045,
+                "width": 18.149999999999988,
+                "height": 4.125,
+                "rotation": 0,
+                "opacity": 1,
+                "visible": true,
+                "clip": false,
+                "radius": 0,
+                "radii": [
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "shadows": [],
+                "nativeVisual": false,
+                "fills": [
+                  {
+                    "fillColor": "#ff829d",
+                    "fillOpacity": null,
+                    "fillColorGradient": null
+                  }
+                ],
+                "strokes": [
+                  {
+                    "strokeColor": "#98233f",
+                    "strokeOpacity": 1,
+                    "strokeStyle": null,
+                    "strokeWidth": 2,
+                    "strokeAlignment": null,
+                    "strokeCapStart": "round",
+                    "strokeCapEnd": "round",
+                    "strokeColorGradient": null
+                  }
+                ],
+                "constraints": {
+                  "horizontal": "left",
+                  "vertical": "top"
+                },
+                "assetKey": "fixture:machine-10",
+                "rasterSurface": false,
+                "rasterSubtree": false,
+                "visualSuppressed": false,
+                "rasterOpacityBaked": true,
+                "button": false,
+                "nativeGroup": false,
+                "children": [],
+                "rasterBounds": {
+                  "x": -2.9999999999999964,
+                  "y": -3,
+                  "width": 24.15,
+                  "height": 10.125
+                }
+              },
+              {
+                "id": "machine-11",
+                "name": "svg-path",
+                "type": "path",
+                "x": 5.77499999999999,
+                "y": 0,
+                "width": 6.6000000000000085,
+                "height": 9.075000000000045,
+                "rotation": 0,
+                "opacity": 1,
+                "visible": true,
+                "clip": false,
+                "radius": 0,
+                "radii": [
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "shadows": [],
+                "nativeVisual": false,
+                "fills": [
+                  {
+                    "fillColor": "#f94870",
+                    "fillOpacity": null,
+                    "fillColorGradient": null
+                  }
+                ],
+                "strokes": [
+                  {
+                    "strokeColor": "#98233f",
+                    "strokeOpacity": 1,
+                    "strokeStyle": null,
+                    "strokeWidth": 2,
+                    "strokeAlignment": null,
+                    "strokeCapStart": "round",
+                    "strokeCapEnd": "round",
+                    "strokeColorGradient": null
+                  }
+                ],
+                "constraints": {
+                  "horizontal": "left",
+                  "vertical": "top"
+                },
+                "assetKey": "fixture:machine-11",
+                "rasterSurface": false,
+                "rasterSubtree": false,
+                "visualSuppressed": false,
+                "rasterOpacityBaked": true,
+                "button": false,
+                "nativeGroup": false,
+                "children": [],
+                "rasterBounds": {
+                  "x": -2.9999999999999893,
+                  "y": -2.999999999999943,
+                  "width": 12.6,
+                  "height": 15.075
+                }
+              },
+              {
+                "id": "machine-12",
+                "name": "svg-path",
+                "type": "path",
+                "x": 4.124999999999998,
+                "y": 8.25,
+                "width": 9.899999999999991,
+                "height": 4.9500000000000455,
+                "rotation": 0,
+                "opacity": 1,
+                "visible": true,
+                "clip": false,
+                "radius": 0,
+                "radii": [
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "shadows": [],
+                "nativeVisual": false,
+                "fills": [
+                  {
+                    "fillColor": "#ff9db3",
+                    "fillOpacity": null,
+                    "fillColorGradient": null
+                  }
+                ],
+                "strokes": [
+                  {
+                    "strokeColor": "#98233f",
+                    "strokeOpacity": 1,
+                    "strokeStyle": null,
+                    "strokeWidth": 2,
+                    "strokeAlignment": null,
+                    "strokeCapStart": "round",
+                    "strokeCapEnd": "round",
+                    "strokeColorGradient": null
+                  }
+                ],
+                "constraints": {
+                  "horizontal": "left",
+                  "vertical": "top"
+                },
+                "assetKey": "fixture:machine-12",
+                "rasterSurface": false,
+                "rasterSubtree": false,
+                "visualSuppressed": false,
+                "rasterOpacityBaked": true,
+                "button": false,
+                "nativeGroup": false,
+                "children": [],
+                "rasterBounds": {
+                  "x": -2.9999999999999964,
+                  "y": -2.999999999999943,
+                  "width": 15.9,
+                  "height": 10.95
+                }
+              },
+              {
+                "id": "machine-13",
+                "name": "svg-path",
+                "type": "path",
+                "x": 1.6499999999999915,
+                "y": 12.375000000000028,
+                "width": 14.850000000000005,
+                "height": 3.3000000000000114,
+                "rotation": 0,
+                "opacity": 1,
+                "visible": true,
+                "clip": false,
+                "radius": 0,
+                "radii": [
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "shadows": [],
+                "nativeVisual": false,
+                "fills": [],
+                "strokes": [
+                  {
+                    "strokeColor": "#98233f",
+                    "strokeOpacity": 1,
+                    "strokeStyle": null,
+                    "strokeWidth": 2,
+                    "strokeAlignment": null,
+                    "strokeCapStart": "round",
+                    "strokeCapEnd": "round",
+                    "strokeColorGradient": null
+                  }
+                ],
+                "constraints": {
+                  "horizontal": "left",
+                  "vertical": "top"
+                },
+                "assetKey": "fixture:machine-13",
+                "rasterSurface": false,
+                "rasterSubtree": false,
+                "visualSuppressed": false,
+                "rasterOpacityBaked": true,
+                "button": false,
+                "nativeGroup": false,
+                "children": [],
+                "rasterBounds": {
+                  "x": -2.9999999999999964,
+                  "y": -2.999999999999943,
+                  "width": 20.85,
+                  "height": 9.3
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "machine-14",
+        "name": "Blue level badge",
+        "type": "rectangle",
+        "x": 7.300000000000004,
+        "y": 31.799999999999983,
+        "width": 37.39999999999999,
+        "height": 13.199999999999989,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 6.6,
+        "radii": [
+          6.6,
+          6.6,
+          6.6,
+          6.6
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#00b8f1",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": []
+      },
+      {
+        "id": "machine-15",
+        "name": "Level",
+        "type": "text",
+        "x": 7.300000000000004,
+        "y": 31.799999999999983,
+        "width": 37.39999999999999,
+        "height": 13.199999999999989,
+        "rotation": 0,
+        "opacity": 1,
+        "visible": true,
+        "clip": false,
+        "radius": 0,
+        "radii": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "shadows": [],
+        "nativeVisual": false,
+        "fills": [
+          {
+            "fillColor": "#fff3dc",
+            "fillOpacity": null,
+            "fillColorGradient": null
+          }
+        ],
+        "strokes": [],
+        "constraints": {
+          "horizontal": "left",
+          "vertical": "top"
+        },
+        "rasterSurface": false,
+        "rasterSubtree": false,
+        "visualSuppressed": false,
+        "rasterOpacityBaked": false,
+        "button": false,
+        "nativeGroup": false,
+        "children": [],
+        "text": {
+          "value": "Lv. 6",
+          "size": 7.7,
+          "family": "Nunito",
+          "robloxFamily": "Nunito",
+          "fontSubstituted": false,
+          "weight": 900,
+          "italic": false,
+          "align": "center",
+          "verticalAlign": "center",
+          "lineHeight": 1.2,
+          "letterSpacing": 0,
+          "transform": "none",
+          "measuredWidth": 16.874999999999996,
+          "measuredHeight": 11
+        }
+      }
+    ],
+    "layoutChild": {
+      "horizontalSizing": "fix",
+      "verticalSizing": "fix"
+    },
+    "rasterBounds": {
+      "x": 0,
+      "y": 0,
+      "width": 288,
+      "height": 48
+    }
+  },
+  "warnings": [],
+  "assets": [
+    {
+      "key": "fixture:machine-0",
+      "shapeId": "machine-0",
+      "name": "Molder upgrade",
+      "reason": "gradient geometry",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    },
+    {
+      "key": "fixture:machine-1",
+      "shapeId": "machine-1",
+      "name": "Molder circular icon background",
+      "reason": "gradient geometry",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    },
+    {
+      "key": "fixture:machine-10",
+      "shapeId": "machine-10",
+      "name": "svg-path",
+      "reason": "vector",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    },
+    {
+      "key": "fixture:machine-11",
+      "shapeId": "machine-11",
+      "name": "svg-path",
+      "reason": "vector",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    },
+    {
+      "key": "fixture:machine-12",
+      "shapeId": "machine-12",
+      "name": "svg-path",
+      "reason": "vector",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    },
+    {
+      "key": "fixture:machine-13",
+      "shapeId": "machine-13",
+      "name": "svg-path",
+      "reason": "vector",
+      "format": "png",
+      "scale": 2,
+      "skipChildren": true,
+      "fallback": false
+    }
+  ],
+  "assetMap": {
+    "fixture:machine-0": "rbxassetid://0",
+    "fixture:machine-1": "rbxassetid://0",
+    "fixture:machine-10": "rbxassetid://0",
+    "fixture:machine-11": "rbxassetid://0",
+    "fixture:machine-12": "rbxassetid://0",
+    "fixture:machine-13": "rbxassetid://0"
+  },
+  "fontMap": {},
+  "options": {
+    "textMode": "auto",
+    "behaviors": false,
+    "nativeGroups": true,
+    "smoothing": 0,
+    "runtimeThemes": false,
+    "autoTint": true
+  }
+}

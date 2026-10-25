@@ -1,11 +1,26 @@
 /* Explicit image controls. All previews use the processed pixels sent to Studio. */
 globalThis.P2RImageEditor=(()=>{
+ function isolateSurface(parsed,a,reject){
+  const root=parsed.documentElement;
+  if(!a.omitShapeIds?.length)return root;
+  const elements=Array.from(parsed.querySelectorAll('[id]'));
+  if(!elements.some(n=>n.id==='shape-'+a.surfaceShapeId))reject('Penpot did not identify the background shape in its SVG. Refusing to include editable child layers in the background.');
+  const excluded=new Set(a.omitShapeIds.map(id=>'shape-'+id));
+  for(const node of elements)if(excluded.has(node.id))node.remove();
+  // Font declarations belong to the removed text, not the background. Keep
+  // declarations when any text remains so normal dependency checks still apply.
+  if(!parsed.querySelector('text,tspan,textPath'))for(const style of parsed.querySelectorAll('style')){
+   style.textContent=style.textContent.replace(/@font-face\s*\{[^{}]*\}/gi,'');
+  }
+  return root;
+ }
  async function rasterizeSVG(a){
   const text=new TextDecoder().decode(new Uint8Array(a.svgBytes));
   const reject=reason=>{throw Error('Cannot render "'+a.name+'" locally: '+reason+(a.pngError?' Original PNG error: '+a.pngError:''))};
   if(/<!DOCTYPE|<\?xml-stylesheet/i.test(text))reject('SVG depends on an external document.');
   const parsed=new DOMParser().parseFromString(text,'image/svg+xml'),root=parsed.documentElement;
   if(parsed.querySelector('parsererror')||root.localName!=='svg')reject('invalid SVG.');
+  isolateSurface(parsed,a,reject);
   const internal=value=>value.startsWith('#')||/^data:image\/(?:png|jpeg|webp|gif);base64,/i.test(value);
   for(const node of parsed.querySelectorAll('*')){
    if(['script','foreignobject','text','tspan','textpath','animate','animatetransform','animatemotion','set'].includes(node.localName.toLowerCase()))reject('this SVG needs text, animation, or embedded HTML support from Penpot.');
@@ -15,7 +30,13 @@ globalThis.P2RImageEditor=(()=>{
    }
    const css=node.localName==='style'?node.textContent:node.getAttribute('style')||'';
    if(/@import/i.test(css))reject('an external stylesheet is required.');
-   for(const value of [css,...Array.from(node.attributes,a=>a.value)])for(const match of value.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi))if(!internal(match[2].trim()))reject('an external image, font or filter is required.');
+   for(const value of [css,...Array.from(node.attributes,a=>a.value)])for(const match of value.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi))if(!internal(match[2].trim())){
+    if(/@font-face/i.test(css)){
+     const family=css.match(/font-family\s*:\s*['"]?([^;'"}]+)/i)?.[1]?.trim();
+     reject('Penpot’s SVG fallback requires an external font'+(family?' ('+family+')':'')+'. This does not mean the font is missing from your design. Retry Prepare; a successful manual PNG export indicates the automatic export path needs investigation.');
+    }
+    reject('Penpot’s SVG fallback contains a non-embedded image or filter reference. Retry Prepare; the layer may still export normally as PNG from Penpot.');
+   }
   }
   const box=a.viewBox;if(!Array.isArray(box)||box.length!==4||!box.every(Number.isFinite)||box[2]<=0||box[3]<=0)reject('invalid image bounds.');
   const scale=Math.min(2,1024/box[2],1024/box[3]),width=Math.max(1,Math.ceil(box[2]*scale)),height=Math.max(1,Math.ceil(box[3]*scale));
@@ -82,5 +103,5 @@ globalThis.P2RImageEditor=(()=>{
   }
   return {destroy(){for(const url of urls)URL.revokeObjectURL(url);container.replaceChildren()},states};
  }
- return {create,drawSlice,rasterizeSVG};
+ return {create,drawSlice,rasterizeSVG,isolateSurface};
 })();
