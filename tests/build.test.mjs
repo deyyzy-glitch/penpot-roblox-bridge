@@ -5,6 +5,7 @@ import {readFile} from 'node:fs/promises';
 test('generated plugins retain literal Luau patterns and inline their support modules',async()=>{
  const standalone=await readFile(new URL('../PenpotRoblox.plugin.lua',import.meta.url),'utf8');
  const xml=await readFile(new URL('../PenpotRoblox.rbxmx',import.meta.url),'utf8');
+ assert.match(xml, /^<roblox version="4"><Item class="Script"><Properties>[\s\S]*?<bool name="Disabled">false<\/bool><\/Properties>/, 'plugin entry script must start enabled');
  const unescape=s=>s.replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll('&quot;','"').replaceAll('&amp;','&');
  for(const code of [standalone,unescape(xml)]){
   for(const file of ['References','Templates','Gradient']){

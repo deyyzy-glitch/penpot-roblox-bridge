@@ -1,3 +1,9 @@
+# Penpot Bridge 2.7.1
+
+- Corrected the public Studio plugin entry script's disabled state so enabling the installed plugin starts its toolbar. The 2.7.0 public asset was published with the entry script disabled; generated GitHub model files already had an enabled entry point.
+- Added publication checks for the exact script selected for upload and fresh public-asset readback, including its enabled state and packaged modules.
+- Expanded troubleshooting in the README, helper setup page and Penpot Connection page: start the helper before installing, restart it after reboot, extract the full ZIP, allow local Studio HTTP access, prepare/send/receive order, image setup, and updating both companions.
+
 # Penpot Bridge 2.7.0
 
 - Added blue-accented Dark and Light appearance choices in Settings in both companions. Each saves its preference locally and leaves imported design colors unchanged.
