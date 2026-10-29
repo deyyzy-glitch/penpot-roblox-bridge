@@ -137,19 +137,24 @@ globalThis.P2R = (() => {
       shapes.set(s.id, s);
       const rule=rules[api.currentFile.id+':'+s.id]||{},mode=rule.mode||'auto';
       if(!['auto','native','image','layout','skip','template'].includes(mode))throw Error(s.name+': invalid layer import mode.');
+      if(rule.button!=null&&typeof rule.button!=='boolean')throw Error(s.name+': button control choice must be a boolean.');
       const fontWeight=rule.fontWeight;
       if(fontWeight!=null&&(s.type!=='text'||!Number.isInteger(fontWeight)||fontWeight<100||fontWeight>900||fontWeight%100!==0))throw Error(s.name+': font weight override requires a text layer and a weight from 100 to 900 in steps of 100.');
       const ref=String(rule.ref||'').trim(),template=String(rule.template||'').trim();
       if(ref&&!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(ref))throw Error(s.name+': gameplay reference must be an identifier of 1–64 characters.');
       if(ref&&references.has(ref))throw Error('Duplicate gameplay reference: '+ref);
       if(mode==='template'&&!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(template))throw Error(s.name+': choose a template key of 1–64 identifier characters.');
-      if(mode!=='auto'||ref||fontWeight!=null)custom=true;
+      if(mode!=='auto'||ref||fontWeight!=null||rule.button===true)custom=true;
       if(mode==='skip'){
         if(!parent)throw Error('The root selection cannot be skipped. Select its parent to skip this layer.');
         const omit=(n,level)=>{if(excludedIds.length>=5000||level>64)throw Error('Selection exceeds 5000 shapes or 64 levels.');excludedIds.push(n.id);for(const c of n.children||[])omit(c,level+1)};omit(s,depth);return null;
       }
       if(ref)references.add(ref);
       const parsed=parseName(s.name,behaviors);
+      if(rule.button===true&&!parsed.button){
+        if(!['auto','native'].includes(mode)||suppressed||parsed.scroll||parsed.panel)warn(s,'Saved button control choice is inactive for this conversion mode or explicit behavior.');
+        else parsed.button=true;
+      }
       const rot = num(parent?.rotation) * Math.PI / 180;
       const dx = s.center.x - (parent?.center.x || 0), dy = s.center.y - (parent?.center.y || 0);
       const x = parent ? dx * Math.cos(rot) + dy * Math.sin(rot) + parent.width / 2 - s.width / 2 : 0;

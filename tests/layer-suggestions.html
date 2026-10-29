@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Penpot Bridge · Button suggestions</title><link rel="stylesheet" href="/ui.css"><style>body{max-width:650px;margin:auto;padding:24px}#layers-load,#run{padding:10px;margin:12px 10px 12px 0;border-radius:6px}#results{white-space:pre-wrap;max-height:120px;overflow:auto}#layers-search{margin:10px 0}</style></head><body>
+<h1>Layer controls</h1><p class="muted">Button suggestions are optional. Accepting makes a clickable control; your game supplies its behavior.</p><button id="run">Run browser checks</button><pre id="results">Ready</pre><p id="status" aria-live="polite"></p><button id="layers-load">Read selection layers</button><input id="layers-search" aria-label="Search layers" placeholder="Search layers"><div id="layer-list"></div>
+<script src="/layer-editor.js"></script><script>
+const fixture=[{id:'root',name:'Shop',type:'board',depth:0},{id:'upgrade',name:'UpgradeButton',type:'rectangle',depth:1},{id:'label',name:'UpgradeButtonLabel',type:'text',depth:2},{id:'buy',name:'Buy_btn',type:'group',depth:1},{id:'buttons',name:'Buttons',type:'group',depth:1}];
+let editor,dirty=0;const fileId='button-suggestion-browser';
+function setup(){editor=P2RLayerEditor.create({post:(type,options,requestId)=>editor.onMessage({type:'layer-list',fileId,requestId,layers:fixture}),invalidate:()=>{dirty++;document.getElementById('status').textContent='Choices changed. Prepare again before sending.'},status:s=>document.getElementById('status').textContent=s});document.getElementById('layers-load').click()}
+const action=text=>Array.from(document.querySelectorAll('#layer-list button')).find(e=>e.textContent===text);
+const check=(value,message)=>{if(!value)throw Error(message)};
+document.getElementById('run').onclick=()=>{
+ const results=[],test=(name,fn)=>{try{fn();results.push({name,passed:true})}catch(e){results.push({name,passed:false,error:e.message})}};
+ // Clear only this fixture's entries, never unrelated preferences.
+ for(const key of ['penpot-bridge-layer-rules-v1','penpot-bridge-dismissed-controls-v1']){const data=JSON.parse(localStorage.getItem(key)||'{}');for(const id of Object.keys(data))if(id.startsWith(fileId+':'))delete data[id];localStorage.setItem(key,JSON.stringify(data))}dirty=0;setup();
+ test('Suggestions appear only for two clear container names and do not invalidate',()=>{check(document.querySelectorAll('.control-suggestion').length===2,'wrong suggestion count');check(dirty===0&&!editor.options().layerRules[fileId+':upgrade'],'mere suggestion changed import')});
+ test('Accepting stores a button choice and requires preparing again',()=>{action('Accept button').click();check(editor.options().layerRules[fileId+':upgrade'].button===true&&dirty===1,'accept not persisted or invalidated');check(!!action('Use default control'),'accepted state missing')});
+ test('Dismissal leaves the export choices unchanged and survives reading again',()=>{action('Dismiss').click();check(dirty===1,'dismiss invalidated');document.getElementById('layers-load').click();check(!action('Accept button'),'dismissal lost')});
+ test('Busy state blocks controls, then reset preserves default source behavior',()=>{editor.setBusy(true);check(action('Use default control').disabled,'busy action enabled');editor.setBusy(false);action('Use default control').click();check(!editor.options().layerRules[fileId+':upgrade']&&!!action('Accept button'),'default not restored')});
+ document.getElementById('results').textContent=JSON.stringify({passed:results.filter(r=>r.passed).length,total:results.length,results},null,2);
+};setup();
+</script></body></html>

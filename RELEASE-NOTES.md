@@ -1,3 +1,14 @@
+# Penpot Bridge 2.7.6 — visual nine-slice editor and optional button suggestions
+
+- Eligible image surfaces have four draggable slice guides alongside the existing numeric insets. Guide positions use source-image pixels and remain aligned when the panel resizes. Keyboard arrows adjust a guide by one pixel; Shift adjusts ten.
+- Stretch previews update while editing. Guides cannot cross; invalid or empty numeric values fail before image processing. Changes remain pending until Apply image settings is clicked, and slicing remains off by default.
+- Optional Left/Right and Top/Bottom links keep opposite insets equal. Reset slice guides returns the insets to zero without changing tint, glow, slicing enablement or the chosen links; Apply is still required.
+- No Studio importer or transfer-format changes. Update the helper and reopen the Penpot companion; Studio plugin 2.7.4 remains compatible.
+- Layers offers reasoned, optional button suggestions for clear names. Accept creates a saved button choice; dismiss leaves the transfer unchanged. Explicit modes/tags and excluded or flattened subtrees take priority. No AI, source-design edits or gameplay-script generation is involved. Existing Studio button support is reused.
+
+- README reorganized around setup and everyday use, with detailed feature, troubleshooting and development guides included in downloads.
+- Validation: 77 Node tests, 12 slice-editor browser checks and four button-suggestion browser checks. No live Penpot/Studio import was performed for this helper-only release.
+
 # Penpot Bridge 2.7.5 — per-layer native text weights
 
 - Text layers in Penpot's Layers page have a Font weight selector. From Penpot remains the default; optional weights from 100 to 900 apply to editable native text and all runs in that layer. Choices persist per file/layer and invalidate prepared transfers.

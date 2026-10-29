@@ -14,7 +14,13 @@
 
 `verifier-fixture.mjs` and `studio-verifier.luau` exercise the read-only post-import verifier. Pass the fixture's document and Importer to the test function outside an MCP recording. Its 18 Studio checks cover clean imports, known font substitutions, old imported fonts, local edits and locks, missing/duplicate/wrong-class objects, parenting, empty and unresolved image references, expected versus new overlaps, user objects, unchanged instance state, duplicate wrappers, and visible versus hidden text overflow. The sandbox is removed after testing. A Studio UI-host smoke check additionally exercises loading the document, verifying the selected import, and rendering finding rows.
 
-Run Node tests with `node --test --test-isolation=none tests/bridge.test.mjs tests/exporter.test.mjs tests/cloud.test.mjs`.
+Run all Node tests with `node --test --test-isolation=none tests/*.test.mjs`.
+
+For the visual slice editor, run `node tests/slice-editor-server.mjs` and open `http://127.0.0.1:43134/`. **Run regression checks** covers opt-in controls and source pixels, suggestions, live preview/field/guide synchronization, keyboard direction and steps, clamping, invalid-input rejection before processing, applied metadata and scale, narrow panels, and removing slicing. Also drag each guide with a real pointer, check narrow/wide panels and both appearances. The fixture uses generated artwork, a mock processing response and no upload credentials; Studio and Penpot are not required. Stop the fixture server afterward.
+
+The same browser checks also cover linking opposite borders in either direction, axis independence, linked bounds, unlinking without geometry changes, and resetting only slice guides while keeping styling, links and unapplied state.
+
+The fixture server also hosts `http://127.0.0.1:43134/layers` for optional button suggestions. Four browser checks exercise conservative suggestions, accept/dirty state, persisted dismissal, busy controls and reverting to defaults. Node layer-editor/layer-mode tests additionally cover naming exclusions, per-file persistence, parent suppression, existing modes and behavior tags, boolean validation and the unchanged exported button contract. No Penpot or Studio connection is required.
 Include `tests/image-tools.test.mjs` for mask deduplication, alpha-preserving dilation, bounded silhouette blur, processed previews and portable glow payloads.
 
 `studio-advanced-fixture.mjs` creates mixed text, aliases, themes and image-control metadata. Pass Importer and its document to `studio-advanced.luau`. Its eight checks cover RichText escaping/content, tint/glow/slice descriptors, opt-in module generation, aliases, locks, nested import isolation, retained user scripts and invalid metadata. The sandbox is removed afterward.

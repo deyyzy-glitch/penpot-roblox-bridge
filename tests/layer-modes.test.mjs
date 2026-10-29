@@ -8,6 +8,17 @@ const api=root=>({currentFile:{id:'file'},currentPage:{id:'page'},selection:[roo
 const exportDoc=(root,rules={},options={})=>context.P2R.exportSelection(api(root),[root],{tokens:false,layerRules:Object.fromEntries(Object.entries(rules).map(([id,r])=>['file:'+id,r])),...options}).document;
 
 const textLayer=()=>shape('stats','text',{characters:'0.58s | Luck 2.5',fontFamily:'Nunito',fontSize:9,fontWeight:700,textBounds:{width:65.03125,height:12}});
+test('button names remain unchanged until an explicit choice, which uses the existing button contract',()=>{
+ const s=shape('buy','rectangle',{name:'BuyButton'}),before=JSON.stringify(s);assert.equal(exportDoc(s).design.button,false);
+ const d=exportDoc(s,{buy:{button:true,ref:'Buy'}});assert.equal(d.design.button,true);assert.equal(d.design.name,'BuyButton');assert.equal(d.design.ref,'Buy');assert.equal(d.version,5);assert.equal(JSON.stringify(s),before);assert.equal(exportDoc(s).design.button,false);
+ assert.equal(exportDoc(s,{}, {layerRules:{'other:buy':{button:true}}}).design.button,false);assert.throws(()=>exportDoc(s,{buy:{button:'true'}}),/must be a boolean/);
+});
+test('button choices respect conversion modes, ancestor artwork and explicit scrolling',()=>{
+ for(const mode of ['image','layout']){const d=exportDoc(shape('buy'),{buy:{mode,button:true}});assert.equal(d.design.button,false);assert.match(d.warnings.join(' '),/button control choice is inactive/)}
+ const root=shape('root','group',{children:[shape('buy')]});const d=exportDoc(root,{root:{mode:'image'},buy:{button:true}});assert.equal(d.design.children[0].button,false);
+ const scroll=exportDoc(shape('buy','group',{name:'Buy [scroll]'}),{buy:{button:true}},{behaviors:true});assert.equal(scroll.design.scroll,true);assert.equal(scroll.design.button,false);
+ const button=exportDoc(shape('buy','rectangle',{name:'Buy [button]'}),{buy:{button:true}},{behaviors:true});assert.equal(button.design.button,true);
+});
 test('explicit native font weights preserve the Penpot source and clear back to its original weight',()=>{
  const s=textLayer(),before=JSON.stringify(s);const original=exportDoc(s);assert.equal(original.design.text.weight,700);assert.equal(original.design.text.weightOverride,undefined);
  const d=exportDoc(s,{stats:{fontWeight:800}});assert.equal(d.design.text.weight,800);assert.equal(d.design.text.sourceWeight,700);assert.equal(d.assets.length,0);assert.equal(d.version,5);assert.match(d.warnings.join(' '),/Explicit native font weight/);
