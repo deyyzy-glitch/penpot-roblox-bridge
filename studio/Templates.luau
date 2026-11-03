@@ -14,7 +14,7 @@ function Templates.resolve(options,key)
  assert(valid(key),'Invalid template key')
  local value=(options.templates or Templates.read())[key]
  local instance=typeof(value)=='Instance'and value or type(value)=='table'and value.instance
- assert(instance and instance:IsA('GuiObject')and instance.Archivable,'Map template '..key..' to an archivable UI object in Options → Reusable UI templates.')
+ assert(instance and instance:IsA('GuiObject')and instance.Archivable,'Map template '..key..' to an archivable UI object in Templates → Map selected component.')
  return instance,type(value)=='table'and tostring(value.revision or key)or key
 end
 function Templates.clone(template)

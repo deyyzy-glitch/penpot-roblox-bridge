@@ -53,7 +53,7 @@ local function locked(i,p)
  return false
 end
 function Importer.validate(d)
- assert(type(d)=='table' and d.format=='penpot-roblox' and table.find({1,2,3,4,5},d.version),'Unsupported document format/version. Update the Studio plugin for newer exports.')
+ assert(type(d)=='table' and d.format=='penpot-roblox' and table.find({1,2,3,4,5,6},d.version),'Unsupported document format/version. Update the Studio plugin for newer exports.')
  assert(type(d.source)=='table','Missing source')
  for _,k in {'fileId','pageId','rootId'} do assert(type(d.source[k])=='string' and #d.source[k]>0 and #d.source[k]<200,'Invalid source '..k) end
  assert(type(d.design)=='table' and d.design.id==d.source.rootId,'Root identity mismatch')
@@ -85,6 +85,15 @@ function Importer.validate(d)
   number(n.opacity or 1,0,1,'opacity'); number(n.radius or 0,0,100000,'radius')
   if n.radii then assert(type(n.radii)=='table' and #n.radii==4,'Invalid corner radii');for _,v in n.radii do number(v,0,100000,'corner radius')end end
   assert(n.nativeVisual==nil or type(n.nativeVisual)=='boolean','Invalid native visual')
+  if n.upgradedGradient~=nil then
+   assert(d.version>=6 and type(n.upgradedGradient)=='boolean','Invalid upgraded gradient metadata')
+   if n.upgradedGradient then
+    local g=n.fills and n.fills[1]and n.fills[1].fillColorGradient
+    assert(g and not n.visualSuppressed and not n.rasterSubtree and (not n.assetKey or n.nativeVisual),'Invalid upgraded gradient surface')
+    if g.width~=nil then number(g.width,.000001,10000,'gradient width')end
+    assert(Gradient.geometry(g,n.width,n.height),'Gradient geometry requires Image mode')
+   end
+  end
   if n.nativeVisual then assert(n.assetKey and not n.rasterSubtree and not n.visualSuppressed and n.type~='text' and (n.type=='rectangle' or n.type=='board' or n.type=='group'),'Invalid native effect fallback')end
   if n.shadows then assert(type(n.shadows)=='table' and #n.shadows<=16,'Too many shadows');for _,s in n.shadows do
    assert(s.style==nil or s.style=='drop-shadow' or s.style=='inner-shadow','Invalid shadow style');assert(type(s.color)=='table','Missing shadow color');color(s.color.color);number(s.color.opacity or 1,0,1,'shadow opacity')
@@ -116,9 +125,10 @@ function Importer.validate(d)
    if g then
     assert(g.type=='linear' or g.type=='radial','Invalid gradient type')
     for _,k in {'startX','startY','endX','endY'} do number(g[k],-10000,10000,'gradient coordinate') end
-    assert(type(g.stops)=='table' and #g.stops>=2 and #g.stops<=20,'Gradient must have 2–20 stops')
+    local nativeFill=not n.visualSuppressed and (not n.assetKey or n.nativeVisual)
+    assert(type(g.stops)=='table' and #g.stops>=(nativeFill and 2 or 1) and #g.stops<=(nativeFill and 20 or 1024),'Gradient stop budget exceeded; use Image mode for complex native fills')
     local previous=-1
-    for _,s in ipairs(g.stops) do color(s.color);number(s.offset,0,1,'stop');number(s.opacity or 1,0,1,'stop opacity');assert(s.offset>previous,'Gradient stops must strictly increase');previous=s.offset end
+    for _,s in ipairs(g.stops) do color(s.color);number(s.offset,0,1,'stop');number(s.opacity or 1,0,1,'stop opacity');assert(s.offset>previous or (not nativeFill and s.offset==previous),'Gradient stops must increase');previous=s.offset end
    end
   end
   for _,s in ipairs(n.strokes or {}) do if s.strokeColor then color(s.strokeColor) end;number(s.strokeWidth or 1,0,1000,'stroke width');number(s.strokeOpacity or 1,0,1,'stroke opacity') end
@@ -384,7 +394,12 @@ local function descriptors(d,options)
    end
    local g=f and f.fillColorGradient
    if g then
-    if g.type~='linear' then warn(n,'Radial gradient needs a raster asset; first fill color retained.')
+    if n.upgradedGradient then
+     local props=assert(Gradient.geometry(g,n.width,n.height),'Gradient geometry requires Image mode')
+     props.Name='Penpot Gradient';props.Enabled=true;props.Color,props.Transparency=Gradient.sequences(g.stops)
+     if text then p.TextColor3=Color3.new(1,1,1)else p.BackgroundColor3=Color3.new(1,1,1)end
+     add(n.id..'::gradient',n.id,'UIGradient',props)
+    elseif g.type~='linear' then warn(n,'Radial gradient needs a raster asset; first fill color retained.')
     else
      local colors,alpha=Gradient.sequences(g.stops)
      local dx=(g.endX-g.startX)*n.width;local dy=(g.endY-g.startY)*n.height

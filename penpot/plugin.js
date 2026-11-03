@@ -96,6 +96,43 @@ globalThis.P2R = (() => {
     return {family:substitutions[key]||'Arial',known:!!substitutions[key],exact:false};
   }
   function shouldBakeText(mode,match){if(mode==='live')return false;if(mode==='exact')return !match.exact;return !match.known;}
+  // Penpot gradients use object-bounding-box coordinates, not pixel vectors.
+  // Return only geometry representable by the released UIGradient properties.
+  function gradientGeometry(g,w,h){
+    if(!g||![w,h,g.startX,g.startY,g.endX,g.endY].every(Number.isFinite)||w<=0||h<=0)return null;
+    const dx=g.endX-g.startX,dy=g.endY-g.startY,r=Math.hypot(dx,dy);
+    if(r<1e-8)return null;
+    let type,scale,rotation=0,offset;
+    if(g.type==='linear'){
+      const qx=dx/w,qy=dy/h,q=Math.hypot(qx,qy),cx=qx/q,cy=qy/q;
+      type='Linear';rotation=Math.atan2(cy,cx)*180/Math.PI;
+      // Roblox's unscaled segment intersects the rectangle's edges through its
+      // center; its length is not the bounding box's projection onto the normal.
+      scale=(r*r/q)/Math.min(Math.abs(cx)>1e-10?w/Math.abs(cx):Infinity,Math.abs(cy)>1e-10?h/Math.abs(cy):Infinity);
+      offset=[(g.startX+g.endX)/2-.5,(g.startY+g.endY)/2-.5];
+    }else if(g.type==='radial'){
+      const width=g.width===undefined?1:g.width;if(!Number.isFinite(width)||width<.000001||width>10000)return null;
+      // Ellipse covariance after Penpot's normalized rotation and aspect stretch.
+      const ux=dx*w,uy=dy*h,vx=-dy*width*w,vy=dx*width*h;
+      const a=ux*ux+vx*vx,b=ux*uy+vx*vy,c=uy*uy+vy*vy;
+      const gap=Math.hypot(a-c,2*b),major=Math.sqrt((a+c+gap)/2),minor=Math.sqrt(Math.max(0,(a+c-gap)/2));
+      if(minor<1e-8)return null;
+      offset=[g.startX-.5,g.startY-.5];
+      if(Math.abs(major-minor)<=major*1e-6){type='Radial';scale=major/((w+h)/4);}
+      else if(Math.abs(major/minor-Math.max(w,h)/Math.min(w,h))<=1e-6){
+        type='Elliptical';scale=major/(Math.max(w,h)/2);
+        rotation=Math.atan2(2*b,a-c)*90/Math.PI-(w<h?90:0);
+      }else return null;
+    }else return null;
+    if(!Number.isFinite(scale)||scale<.001||scale>10000||offset.some(v=>!Number.isFinite(v)||Math.abs(v)>10000))return null;
+    return {type,scale,rotation,offset};
+  }
+  function nativeGradient(g,w,h){
+    if(!gradientGeometry(g,w,h)||!Array.isArray(g.stops)||g.stops.length<2)return false;
+    const stops=g.stops;let last=-1;
+    for(const s of stops){if(!Number.isFinite(s.offset)||s.offset<=last||s.offset<0||s.offset>1||!/^#[0-9a-f]{6}$/i.test(s.color)||!Number.isFinite(s.opacity??1)||(s.opacity??1)<0||(s.opacity??1)>1)return false;last=s.offset;}
+    return stops.length+(stops[0].offset>0?1:0)+(stops.at(-1).offset<1?1:0)<=20;
+  }
   function textRuns(shape){
     if(typeof shape.getRange!=='function'||!shape.characters)return null;
     const out=[];let reads=0;
@@ -118,7 +155,7 @@ globalThis.P2R = (() => {
   }
   function exportSelection(api, selection = [...api.selection], options = {}) {
     const rules=options.layerRules||{};if(!rules||typeof rules!=='object'||Array.isArray(rules))throw Error('Invalid layer rules.');
-    const excludedIds=[],references=new Set();let custom=false;
+    const excludedIds=[],references=new Set();let custom=false,upgradedGradients=false;
     const textMode=options.textMode||'auto';if(!['auto','live','exact'].includes(textMode))throw Error('Invalid text mode.');
     const behaviors=options.behaviors===true,preferNativeGroups=options.nativeGroups!==false;
     if(options.runtimeThemes&&options.tokens===false)throw Error('Enable token bindings to generate a theme module.');
@@ -180,7 +217,7 @@ globalThis.P2R = (() => {
       if(s.flipX||s.flipY)reasons.push('mirroring');
       if(new Set(radii).size>1)reasons.push('individual corner radii');
       if((s.strokes||[]).length>1||(s.strokes||[]).some(v=>v.strokeColorGradient||(v.strokeStyle&&!['solid','none'].includes(v.strokeStyle))))reasons.push('complex strokes');
-      for(const f of fills){const g=f.fillColorGradient;if(g&&(g.type!=='linear'||!((g.startX===0&&g.endX===1&&g.startY===.5&&g.endY===.5)||(g.startY===0&&g.endY===1&&g.startX===.5&&g.endX===.5))))reasons.push('gradient geometry')}
+      for(const f of fills){const g=f.fillColorGradient;if(g&&(!nativeGradient(g,s.width,s.height)||s.type==='text'||parsed.scroll))reasons.push('gradient geometry')}
       let match,runs;
       if(s.type==='text'){
         try{runs=textRuns(s)}catch(e){warn(s,'RichText fallback: '+e.message)}
@@ -232,6 +269,7 @@ globalThis.P2R = (() => {
         ...(behaviors?{behavior:{panel:parsed.panel||'',action:parsed.action||'',target:parsed.target||''},scroll:!!parsed.scroll,initiallyClosed:!!parsed.closed}:{}),
         children:[]
       };
+      if(!suppressed&&!ownLayout&&(!raster||nativeVisual)&&fills[0]?.fillColorGradient){n.upgradedGradient=true;upgradedGradients=true;}
       if (s.type === 'text') {
         n.text={value:s.characters,size:runs?.[0]?.size||num(s.fontSize,16),family:runs?.[0]?.family||s.fontFamily,robloxFamily:match.family,fontSubstituted:runs?runs.some(r=>r.fontSubstituted):!match.exact,weight:runs?.[0]?.weight||num(s.fontWeight,400),
           italic:s.fontStyle === 'italic',align:s.align,verticalAlign:s.verticalAlign,
@@ -285,6 +323,7 @@ globalThis.P2R = (() => {
     const document={format:'penpot-roblox',version,source:{fileId:api.currentFile.id,pageId:api.currentPage.id,rootId:root.id},
       design:visit(root,null,0),warnings,assets,assetMap:{},fontMap:{},options:{textMode,behaviors,nativeGroups:preferNativeGroups,smoothing,runtimeThemes:options.runtimeThemes===true,autoTint:options.autoTint!==false},capabilities:['text-modes','native-groups','behavior-tags','native-effects','flex-layouts','quality-report','smooth-corners','rich-text','tokens','image-controls']};
     if(custom){document.version=5;document.excludedIds=excludedIds;document.capabilities.push('layer-modes','gameplay-references','templates');}
+    if(upgradedGradients){document.version=6;document.capabilities.push('upgraded-gradients');}
     if(options.tokens!==false){
       try{const catalog=api.library?.local?.tokens;if(catalog)document.tokens=P2RTokens.exportCatalog(catalog,warnings);}
       catch(error){
@@ -365,10 +404,10 @@ globalThis.P2R = (() => {
    const layers=[];const visit=(n,depth)=>{if(depth>64||layers.length>=5000)throw Error('Selection exceeds 5000 layers or 64 levels.');layers.push({id:n.id,name:n.name,type:n.type,depth,...(n.type==='text'&&Number.isFinite(Number(n.fontWeight))?{sourceWeight:Number(n.fontWeight)}:{})});for(const c of n.children||[])visit(c,depth+1)};visit(selection[0],0);
    return {fileId:api.currentFile.id,layers};
   }
-  return {exportSelection,exportAssets,parseName,fontMatch,shouldBakeText,textRuns,describeSelection};
+  return {exportSelection,exportAssets,parseName,fontMatch,shouldBakeText,textRuns,describeSelection,gradientGeometry};
 })();
 
-penpot.ui.open('Penpot Bridge', 'http://127.0.0.1:43129/ui.html', {width:640,height:700});
+penpot.ui.open('Penpot Bridge', 'http://127.0.0.1:43129/ui.html', {width:660,height:860});
 let lastBundle,lastRequestId;
 penpot.ui.onMessage(async message => {
   const requestId=message?.requestId;

@@ -4,7 +4,7 @@
 
 ## Run from source
 
-Install Node.js 22 or newer. There are no npm dependencies. Source installation supports Windows, macOS and Linux; the bundled portable download is Windows x64.
+Install Node.js 24 or newer. There are no npm dependencies. Source installation supports Windows, macOS and Linux; the bundled portable download is Windows x64.
 
 ```sh
 node build.mjs

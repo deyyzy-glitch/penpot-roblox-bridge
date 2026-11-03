@@ -18,7 +18,8 @@ test('loopback bridge authenticates, transfers, validates, and serves only packa
   assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify({...d,version:3})})).status,200);
   assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify({...d,version:4})})).status,200);
   assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify({...d,version:5})})).status,200);
-  assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify({...d,version:6})})).status,400);
+  assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify({...d,version:6})})).status,200);
+  assert.equal((await fetch(url+'/document',{method:'POST',headers,body:JSON.stringify({...d,version:7})})).status,400);
   assert.equal((await fetch(url+'/layer-editor.js')).status,200);
   assert.equal((await fetch(url+'/shell.js')).status,200);
   const style=await fetch(url+'/ui.css');assert.equal(style.status,200);assert.match(style.headers.get('content-type'),/^text\/css/);

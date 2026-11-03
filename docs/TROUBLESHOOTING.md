@@ -8,7 +8,7 @@
 | It worked yesterday, but fails after restarting the PC | Run the helper launcher again. The portable helper does not automatically start at login. |
 | Launcher says “The bundled runtime is missing” | Extract the **entire** Windows helper ZIP. Run the launcher from the extracted folder, not from inside the ZIP or copied out on its own. |
 | Launcher says the address is already in use | A helper may already be running, including a background copy. In current helpers, another launch identifies it and opens its status page instead of crashing. Close the duplicate window and continue with the running helper. To update, close the original helper before running the new download. |
-| Studio says the helper is offline, but its status page opens | Use **Connection → Check local connection** in Studio. If you denied the request to contact `127.0.0.1`, review Penpot Bridge's HTTP permission in Manage Plugins and allow it. This address means your own PC. |
+| Studio says the helper is offline, but its status page opens | Use **Local helper → Check local connection** in Studio. If you denied the request to contact `127.0.0.1`, review Penpot Bridge's HTTP permission in Manage Plugins and allow it. This address means your own PC. |
 | Studio has nothing to receive | In Penpot, select the layer, group, or board, click **Prepare selection**, then **Send to Studio**. In Studio, click **Receive from Penpot**. Preparing alone does not send it. |
 | Images need setup, or uploads stopped after restarting the helper | Open the setup page and configure your own Roblox Assets Read/Write key locally. Keys are kept in helper memory and cleared when it stops. Check account/group and asset permissions if Roblox rejects an upload. |
 | Preparation stops on a named layer | Read the full layer/error message. Check its images and fonts are loaded and that the layer exports from Penpot itself. Reopen the companion and retry; include the full error and helper/plugin versions in a bug report if it repeats. |
@@ -17,5 +17,14 @@
 | Duplicate Studio plugin buttons | Keep one installed plugin copy. Do not put the whole GitHub folder in Studio's Plugins folder. Check for an old manually installed local copy alongside the inventory plugin. |
 
 Installing the Roblox plugin does **not** install the Windows helper or the Penpot plugin. Each person sets up those parts on their own PC. The helper is needed while importing; the finished Roblox game runs without it. Keep keys out of screenshots and GitHub issues.
+
+## Finding controls in 3.0
+
+- **Layers shows one layer:** use its search/selection list to choose another layer; all existing per-layer controls remain available there.
+- **Images will not send:** select each surface with pending changes and click **Apply image settings**. Switching surfaces preserves separate drafts.
+- **A window is too short:** scroll the content area. Desktop proportions stay fixed instead of shrinking text; a narrow Studio host can also scroll horizontally.
+- **Mapping a template:** select a UI object in Explorer, open **Templates**, enter a key in the field and click **Map selected component**. Use that same key in Penpot's layer controls.
+
+See the [interface guide](UI-GUIDE.md) for both sidebars and installing the GitHub plugin.
 
 [Back to setup](../README.md) · [Feature guide](FEATURES.md)

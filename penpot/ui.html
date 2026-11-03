@@ -1,40 +1,26 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Penpot Bridge</title><link rel="stylesheet" href="ui.css"></head>
-<body>
-<aside class="sidebar">
- <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><div><strong>Penpot</strong><small>BRIDGE</small></div></div>
- <p class="nav-group">WORKSPACE</p>
- <nav aria-label="Workspace">
-  <button class="nav-item active" data-page="transfer" aria-current="page"><span class="nav-icon" aria-hidden="true">01</span><span>Transfer</span></button>
-  <button class="nav-item" data-page="layers"><span class="nav-icon" aria-hidden="true">02</span><span>Layers</span></button>
-  <button class="nav-item" data-page="images"><span class="nav-icon" aria-hidden="true">03</span><span>Images</span></button>
- </nav>
- <nav class="nav-bottom" aria-label="Preferences">
-  <button class="nav-item" data-page="settings"><span class="nav-icon" aria-hidden="true">≡</span><span>Settings</span></button>
-  <button class="nav-item" data-page="connection"><span class="nav-icon dot" aria-hidden="true">●</span><span>Connection</span></button>
- </nav>
- <div class="sidebar-caption">Design → Studio</div>
-</aside>
-<div class="workspace">
- <header><p class="eyebrow" id="page-category">WORKSPACE / TRANSFER</p><h1 id="page-title">Your design, ready to build.</h1><p id="page-description">Prepare a selection and send it to Roblox Studio.</p></header>
- <main>
- <section class="view" data-view="transfer" aria-label="Transfer design">
-  <div class="selection-card card">
-   <div class="section-heading"><p class="eyebrow">SELECTED DESIGN</p><span class="tag">PENPOT</span></div>
-   <div class="selection-symbol" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-   <h2 id="name">Choose your selection</h2><p class="muted" id="summary">Select one layer, group, or board on your canvas.</p>
-   <button id="export" class="primary">Prepare selection <span aria-hidden="true">→</span></button>
-  </div>
-  <div class="card transfer-card"><p class="eyebrow">NEXT STOP / ROBLOX STUDIO</p><h2>Send it across.</h2><p class="muted">Then choose <strong>Receive from Penpot</strong> in the Studio plugin.</p><button id="send" class="primary" disabled>Send to Studio <span aria-hidden="true">→</span></button><button id="save" class="quiet" disabled>Download portable bundle</button></div>
-  <details class="notes"><summary>Preparation notes</summary><div id="details">No preparation notes yet.</div></details>
-  <details class="notes"><summary>Inspect exported JSON</summary><textarea id="json" readonly aria-label="Exported JSON"></textarea></details>
- </section>
- <section class="view" data-view="layers" aria-label="Layer controls" hidden>
-  <div class="card"><p class="eyebrow">CONVERSION, LAYER BY LAYER</p><h2>Keep the parts you need.</h2><p class="muted">Choose how layers import, adjust native text weights, and assign gameplay references. Your Penpot design stays untouched.</p><button id="layers-load" class="secondary">Read selection layers</button></div>
-  <label class="search"><span class="sr-only">Search layers</span><input id="layers-search" placeholder="Find a layer…" aria-label="Search layers"></label><div id="layer-list"><p class="empty-state">Read your selection to see its layers here.</p></div>
-  <details class="notes"><summary>What the modes mean</summary><p>Auto follows the normal fidelity rules. Native requests editable objects. Image flattens the visual subtree. Layout only keeps child content without its own appearance. Skip omits the subtree. Reusable template uses a component mapped in Studio.</p><p>Choices are saved locally per design file. Prepare again after making changes. Native mode reports unsupported effects instead of silently dropping them.</p></details>
- </section>
- <section class="view" data-view="images" aria-label="Prepared images" hidden><div class="card"><p class="eyebrow">ASSET FINISHING</p><h2>A little polish, where it matters.</h2><p class="muted">Prepare a design first. Image surfaces appear below with tint, edge cleanup, glow and nine-slice controls.</p></div><div id="image-controls" aria-label="Prepared image settings"></div><p id="images-empty" class="empty-state">No image surfaces prepared yet.</p></section>
+<body><div class="app-shell">
+<div class="app-bar"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="11" height="12" rx="2"/><rect x="10" y="10" width="11" height="12" rx="2"/></svg><strong>Penpot Bridge</strong><span>PENPOT COMPANION</span></div>
+<aside class="sidebar"><div class="brand"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="11" height="12" rx="2"/><rect x="10" y="10" width="11" height="12" rx="2"/></svg></div><p class="nav-group">WORKSPACE</p><nav aria-label="Workspace"><button class="nav-item active" data-page="transfer" aria-current="page"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg><span>Transfer</span></button><button class="nav-item" data-page="layers"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg><span>Layers</span></button><button class="nav-item" data-page="images"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1"/><path d="m3 17 6-6 4 4 3-3 5 5"/></svg><span>Images</span></button><button class="nav-item" data-page="settings"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 3-1 3-3 1-2 4 2 2 1 4 3 1 2 3 4-1 1-3 3-1 2-4-2-2-1-4-3-1-2-3-4 1Z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></button></nav>
+<button class="helper-link" data-page="connection"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 14 4-4m-7 6-1 1a4 4 0 0 1-5-5l5-5a4 4 0 0 1 5 0m2 1 1-1a4 4 0 0 1 5 5l-5 5a4 4 0 0 1-5 0"/></svg><span>Local helper<small id="helper-state" data-state="checking">Checking…</small></span></button><p class="sidebar-caption">On this computer</p></aside>
+<div class="workspace"><header><p class="sr-only" id="page-category">WORKSPACE / TRANSFER</p><h1 id="page-title">Prepare for Roblox</h1><p id="page-description">Select a design, prepare it, then send it to Studio.</p></header>
+<main><div class="notice" id="notice" hidden><div id="status" role="status" aria-live="polite"></div></div>
+<section class="view" data-view="transfer" aria-label="Transfer design">
+ <div class="selection-card card"><div class="selection-heading"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><div><p class="eyebrow">SELECTED ON CANVAS</p><h2 id="name">Choose your selection</h2></div></div><p class="muted" id="summary">Select one layer, group, or board in Penpot.</p><button id="export" class="primary"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg><span>Prepare selection</span></button></div>
+ <p class="section-label">YOUR TRANSFER</p>
+ <div class="card workflow-step"><span class="step-number">1</span><div><h3>Prepare your selection</h3><p class="muted">Check fonts and render image surfaces.</p></div></div>
+ <div class="card workflow-step transfer-card"><span class="step-number">2</span><div><h3>Send to Studio</h3><p class="muted">Then choose <strong>Receive from Penpot</strong> in Studio.</p></div><button id="send" class="primary" disabled><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 14 4-4m-7 6-1 1a4 4 0 0 1-5-5l5-5a4 4 0 0 1 5 0m2 1 1-1a4 4 0 0 1 5 5l-5 5a4 4 0 0 1-5 0"/></svg><span>Send to Studio</span></button></div>
+ <button id="save" class="secondary portable" disabled><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H5v18h14V8l-5-5Zm0 0v5h5"/></svg><span>Download portable bundle</span></button>
+ <details class="notes"><summary>Preparation notes</summary><div id="details">No preparation notes yet.</div></details>
+ <details class="notes"><summary>Inspect exported JSON</summary><textarea id="json" readonly aria-label="Exported JSON"></textarea></details>
+</section>
+<section class="view" data-view="layers" aria-label="Layer controls" hidden>
+ <div class="card compact-card"><div><h2 id="layers-source">Current selection</h2><p class="muted" id="layers-summary">Read layers from the current selection.</p></div><button id="layers-load" class="secondary">Read layers</button></div>
+ <label class="search"><span class="sr-only">Search layers</span><input id="layers-search" placeholder="Find a layer…" aria-label="Search layers"></label><div id="layer-picker" class="layer-picker" aria-label="Selection layers"></div><div id="layer-list"><p class="empty-state">Read your selection to choose a layer.</p></div>
+ <details class="notes"><summary>What the modes mean</summary><p>Auto follows the normal fidelity rules. Native requests editable objects. Image flattens the visual subtree. Layout only keeps child content without its own appearance. Skip omits the subtree. Reusable template uses a component mapped in Studio.</p><p>Choices are saved locally per design file. Prepare again after making changes. Native mode reports unsupported effects instead of silently dropping them.</p></details>
+</section>
+<section class="view" data-view="images" aria-label="Prepared images" hidden><p class="muted image-intro">Prepare a design first, then adjust its image surfaces here.</p><div id="image-controls" aria-label="Prepared image settings"></div><p id="images-empty" class="empty-state">No editable image surfaces prepared yet.</p></section>
  <section class="view" data-view="settings" aria-label="Export settings" hidden>
  <div class="card"><label class="field" for="appearance"><strong>Appearance</strong><span>Choose a background. Saved on this device.</span></label><select id="appearance"><option value="dark">Dark</option><option value="light">Light</option></select></div>
   <div class="card"><p class="eyebrow">TEXT & EDITABILITY</p><label class="field" for="text-mode"><strong>Text handling</strong><span>Choose between native text and closer image fidelity.</span><select id="text-mode"><option value="auto">Auto — editable when a match is known</option><option value="live">Editable — accept font differences</option><option value="exact">Exact — use images where needed</option></select></label><p class="caption">Complex typography and visual effects can need images in any mode.</p></div>
@@ -54,11 +40,8 @@
 <p><strong>Studio offline but helper status works?</strong> Check the connection in Studio. If you denied 127.0.0.1, review this plugin’s HTTP permission in Manage Plugins.</p>
 <p><strong>Images need setup?</strong> Configure your own Assets Read/Write key on the setup page. Restarting the helper clears the key. A key is not needed just to install the plugin.</p>
 <p><strong>Old interface or incompatible version?</strong> Update both the Studio plugin and helper. Close the old helper, run the new extracted copy, then reopen the Penpot companion.</p>
-<p><a href="https://github.com/deyyzy-glitch/penpot-roblox-bridge#troubleshooting" target="_blank" rel="noreferrer">Full troubleshooting guide ↗</a></p>
+<p><a href="https://github.com/deyyzy-glitch/penpot-roblox-bridge/blob/main/docs/TROUBLESHOOTING.md" target="_blank" rel="noreferrer">Full troubleshooting guide ↗</a></p>
 </details>
 <p class="caption">Each creator runs their own helper. Image-upload credentials are optional until new image assets are needed.</p></section>
- </main>
- <footer><span class="status-dot" aria-hidden="true"></span><div id="status" role="status" aria-live="polite">Connecting to the helper…</div></footer>
-</div>
-<script src="corners.js"></script><script src="image-editor.js"></script><script src="layer-editor.js"></script><script src="shell.js"></script><script src="ui.js"></script>
-</body></html>
+
+</main></div></div><script src="corners.js"></script><script src="image-editor.js"></script><script src="layer-editor.js"></script><script src="shell.js"></script><script src="ui.js"></script></body></html>

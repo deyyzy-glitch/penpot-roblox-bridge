@@ -79,8 +79,9 @@ test('aliases and template keys reject malformed or ambiguous names before expor
  assert.throws(()=>exportDoc(root,{a:{mode:'template',template:'../Secret'}}),/template key/);
  assert.throws(()=>exportDoc(root,{a:{mode:'unknown'}}),/invalid layer import mode/);
 });
-test('advanced gradient shapes retain image fallbacks despite writable native type enums',()=>{
+test('released compatible radial gradients are native; unsupported ellipse proportions retain fallback',()=>{
  const g={type:'radial',startX:.5,startY:.5,endX:1,endY:.5,stops:[{offset:0,color:'#FF0000'},{offset:1,color:'#0000FF'}]};
- const d=exportDoc(shape('radial','rectangle',{fills:[{fillColorGradient:g}]}));assert.equal(d.assets.length,1);assert.equal(d.design.nativeVisual,false);assert.equal(d.design.rasterSurface,true);
- assert.throws(()=>exportDoc(shape('radial','rectangle',{fills:[{fillColorGradient:g}]}),{radial:{mode:'native'}}),/gradient geometry/);
+ const d=exportDoc(shape('radial','rectangle',{fills:[{fillColorGradient:g}]}));assert.equal(d.assets.length,0);assert.equal(d.design.upgradedGradient,true);assert.equal(d.version,6);
+ const narrow=shape('radial','rectangle',{fills:[{fillColorGradient:{...g,width:.3}}]});assert.equal(exportDoc(narrow).assets.length,1);
+ assert.throws(()=>exportDoc(narrow,{radial:{mode:'native'}}),/gradient geometry/);
 });

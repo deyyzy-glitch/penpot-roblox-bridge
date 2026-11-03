@@ -14,6 +14,15 @@ function editor(saved=null,dismissed=null){
 }
 
 const weightControl=e=>e.get('layer-list').querySelectorAll().find(n=>n.ariaLabel?.startsWith('Font weight for '));
+test('layer picker shows one editor, preserves choices and blocks selection while busy',()=>{
+ const e=editor();e.loadMany([{id:'root',name:'Panel',type:'group',depth:0},{id:'text',name:'Title',type:'text',sourceWeight:700,depth:1}]);
+ const picker=e.get('layer-picker');let rows=e.get('layer-list').children;assert.equal(rows[0].hidden,false);assert.equal(rows[1].hidden,true);
+ picker.children[1].onclick();assert.equal(rows[0].hidden,true);assert.equal(rows[1].hidden,false);assert.equal(picker.children[1].ariaPressed,'true');
+ const weight=weightControl(e);weight.value='800';weight.onchange();assert.equal(e.api.options().layerRules['file:text'].fontWeight,800);
+ e.api.setBusy(true);picker.children[0].onclick();assert.equal(rows[1].hidden,false);assert.equal(picker.children[0].disabled,true);e.api.setBusy(false);picker.children[0].onclick();assert.equal(rows[0].hidden,false);
+ e.get('layers-search').value='Title';e.get('layers-search').oninput();rows=e.get('layer-list').children;assert.equal(rows.length,1);assert.equal(rows[0].hidden,false);assert.equal(weightControl(e).value,'800');
+ e.get('layers-search').value='No matching layer';e.get('layers-search').oninput();assert.equal(e.get('layer-list').children[0].textContent,'No layers match your search.');assert.equal(e.get('layer-picker').children.length,0);
+});
 test('text weights persist per file and reset to the untouched source default',()=>{
  const e=editor();e.load('file','Stats','text');const weight=weightControl(e);
  assert.equal(weight.value,'');assert.match(weight.children[0].textContent,/From Penpot \(700\).*default/);assert.equal(weight.children.length,10);

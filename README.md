@@ -4,13 +4,13 @@ Bring Penpot layers, groups and boards into Roblox Studio as editable UI. Review
 
 [Download Windows helper](https://github.com/deyyzy-glitch/penpot-roblox-bridge/releases/latest/download/PenpotBridge-Windows-x64.zip) · [Studio plugin](https://create.roblox.com/store/asset/129957195606923) · [Release notes](RELEASE-NOTES.md)
 
-**Latest: helper 2.7.6 · Studio plugin 2.7.4.** This update adds visual nine-slice guides, linked borders, slice reset and optional button suggestions. Update the helper for these features; the Studio plugin is unchanged.
+**Latest: 3.0.0 for both helper and Studio plugin.** Redesigned Penpot and Studio interfaces, clearer import progress, searchable layer controls and native compatible radial/elliptical gradients. Update both parts; see [what changed](RELEASE-NOTES.md) and the [interface guide](docs/UI-GUIDE.md).
 
 ## Get started
 
 You need Penpot, Roblox Studio and the local helper on the same computer. The portable download includes Node.js and runs on Windows x64. For macOS/Linux or development, see [running from source](docs/DEVELOPMENT.md#run-from-source).
 
-1. Install [Penpot Bridge in Roblox Studio](https://create.roblox.com/store/asset/129957195606923).
+1. Install [Penpot Bridge in Roblox Studio](https://create.roblox.com/store/asset/129957195606923). A [manual local installation](docs/UI-GUIDE.md#install-the-github-studio-plugin) is also available from GitHub; keep only one enabled copy.
 2. Download and extract the **entire Windows helper ZIP**, then run **Start-Penpot-Bridge.cmd**. Keep that window open while importing.
 3. Open [helper status](http://127.0.0.1:43129/setup). If it cannot open, start the helper before continuing. **You can leave image-upload setup closed and continue without a key.**
 4. In Penpot's Plugin Manager, install `http://127.0.0.1:43129/manifest.json`, approve its requested permissions, and open **Penpot to Roblox**.
@@ -52,11 +52,11 @@ The helper is portable: it is not a tray app and does not start automatically at
 | [Design tokens and runtime themes](docs/FEATURES.md#design-tokens-and-optional-runtime-themes) | Preserve supported bindings and optionally generate a theme module. |
 | [Import verification](docs/FEATURES.md#verify-import) | Check identities, properties, text fitting, image loading and unexpected overlaps. No AI account required. |
 
-See the [full feature guide](docs/FEATURES.md) for settings, code examples and exact limitations.
+See the [interface guide](docs/UI-GUIDE.md) for where controls moved, and the [full feature guide](docs/FEATURES.md) for settings, code examples and exact limitations.
 
 ## Fidelity and limitations
 
-Simple frames, text, buttons, supported layouts, strokes, corners and linear gradients remain native. Complex visuals use transparent image surfaces, up to 2× resolution and capped at 1024 pixels per dimension. Baked artwork is edited in Penpot and re-exported.
+Simple frames, text, buttons, supported layouts, strokes, corners and compatible linear, circular and elliptical gradients remain native. Unsupported gradient geometry retains an image fallback; no Studio beta setting is required. Complex visuals use transparent image surfaces, up to 2× resolution and capped at 1024 pixels per dimension. Baked artwork is edited in Penpot and re-exported.
 
 Font metrics, shadows and gradients may differ from Penpot. The verifier checks object state; it does not compare screenshots or guarantee identical appearance. Review important imports visually. Desktop design workflow is the focus; automatic mobile redesign is outside scope.
 
@@ -65,9 +65,9 @@ Font metrics, shadows and gradients may differ from Penpot. The verifier checks 
 1. Download and extract the latest helper into a new folder.
 2. Close the old helper's command window before starting the new launcher. Another launch cannot replace an already-running copy; only one helper can use the local port.
 3. Close and reopen the Penpot companion. Re-enter your locally saved upload key if new images need it.
-4. Prepare and send again, then receive and import in Studio.
+4. Update the Studio plugin to 3.0.0 and restart Studio after replacing a local plugin. Prepare and send again, then receive and import.
 
-Update the Studio plugin when the release notes call for it. **Helper 2.7.6 works with Studio plugin 2.7.4.** Do not install a second local plugin alongside the inventory version.
+**3.0.0 requires both updated parts for new gradient exports (document version 6).** Older version 1–5 exports still import. Disable or remove an older inventory/local copy before enabling another Studio plugin; do not install duplicate copies.
 
 ## Need help?
 

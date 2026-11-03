@@ -35,5 +35,9 @@ jobs:
           gh release view $releaseTag --json tagName 2>$null
           if ($LASTEXITCODE -eq 0) { Write-Host "Release $releaseTag already exists; keeping it unchanged."; exit 0 }
           $releaseAssets = @(Get-ChildItem dist -File | ForEach-Object FullName)
-          gh release create $releaseTag @releaseAssets --title "Penpot Bridge $releaseTag" --notes-file RELEASE-NOTES.md --target $env:GITHUB_SHA --latest
+          $releaseNotes = (Get-Content RELEASE-NOTES.md -Raw) -split '(?m)^# Penpot Bridge ', 3
+          if ($releaseNotes.Count -lt 2) { throw 'Current release notes were not found' }
+          $currentNotesPath = Join-Path $env:RUNNER_TEMP 'penpot-release-notes.md'
+          ('# Penpot Bridge ' + $releaseNotes[1]).Trim() | Set-Content -LiteralPath $currentNotesPath -Encoding utf8
+          gh release create $releaseTag @releaseAssets --title "Penpot Bridge $releaseTag" --notes-file $currentNotesPath --target $env:GITHUB_SHA --latest
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

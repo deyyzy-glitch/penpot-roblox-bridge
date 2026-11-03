@@ -13,7 +13,7 @@ globalThis.P2RLayerEditor=(()=>{
   return '';
  }
  function create({post,invalidate,status}){
-  const el=id=>document.getElementById(id);let rules={},dismissed={},layers=[],fileId='',request=0,activeRequest,busy=false;
+  const el=id=>document.getElementById(id);let rules={},dismissed={},layers=[],fileId='',selectedId='',request=0,activeRequest,busy=false;
   try{const saved=JSON.parse(localStorage.getItem(storageKey)||'{}');if(saved&&typeof saved==='object'&&!Array.isArray(saved))rules=saved}catch{}
   try{const saved=JSON.parse(localStorage.getItem(dismissedKey)||'{}');if(saved&&typeof saved==='object'&&!Array.isArray(saved))dismissed=saved}catch{}
   const make=(tag,props={})=>Object.assign(document.createElement(tag),props);
@@ -27,13 +27,18 @@ globalThis.P2RLayerEditor=(()=>{
    const covered=new Set(),ancestors=[];
    for(const layer of layers){while(ancestors.length&&ancestors.at(-1).depth>=layer.depth)ancestors.pop();if(ancestors.some(n=>['image','skip','template'].includes(rules[fileId+':'+n.id]?.mode)))covered.add(layer.id);ancestors.push(layer)}
    const matches=layers.filter(n=>n.name.toLowerCase().includes(query));
+   const picker=el('layer-picker');picker?.replaceChildren();
+   if(!matches.slice(0,100).some(n=>n.id===selectedId))selectedId=matches[0]?.id||'';
+   const rows=new Map(),choices=new Map();
+   const select=id=>{selectedId=id;for(const [key,row]of rows)row.hidden=key!==id;for(const [key,b]of choices)b.ariaPressed=String(key===id)};
    for(const layer of matches.slice(0,100)){
     const key=fileId+':'+layer.id,rule={mode:'auto',...rules[key]};
     const row=make('div',{className:'layer-rule'});row.style.marginLeft=Math.min(layer.depth,4)*8+'px';
+    if(picker){const choice=make('button',{type:'button',className:'layer-choice',ariaPressed:String(layer.id===selectedId),disabled:busy});choice.style.paddingLeft=10+Math.min(layer.depth,4)*8+'px';choice.appendChild(make('strong',{textContent:layer.name}));choice.appendChild(make('small',{textContent:layer.type}));choice.onclick=()=>{if(!busy)select(layer.id)};picker.appendChild(choice);choices.set(layer.id,choice);rows.set(layer.id,row);row.hidden=layer.id!==selectedId;}
     row.appendChild(make('strong',{textContent:layer.name}));row.appendChild(make('small',{textContent:layer.type}));
     const label=make('label',{textContent:'Import as '});const mode=make('select',{ariaLabel:'Import mode for '+layer.name});
     for(const [value,text]of Object.entries(modes))mode.appendChild(make('option',{value,textContent:text}));mode.value=rule.mode;mode.disabled=busy;label.appendChild(mode);row.appendChild(label);
-    const ref=make('input',{value:rule.ref||'',placeholder:'Gameplay reference, e.g. UpgradeButton',maxLength:64,disabled:busy,ariaLabel:'Gameplay reference for '+layer.name});row.appendChild(ref);
+    const ref=make('input',{className:'gameplay-reference',value:rule.ref||'',placeholder:'Optional reference, e.g. UpgradeButton',maxLength:64,disabled:busy,ariaLabel:'Gameplay reference for '+layer.name});row.appendChild(ref);
     const template=make('input',{value:rule.template||'',placeholder:'Template key mapped in Studio',maxLength:64,disabled:busy,ariaLabel:'Reusable template for '+layer.name});template.hidden=rule.mode!=='template';row.appendChild(template);
     let weight;
     if(layer.type==='text'){
@@ -57,21 +62,22 @@ globalThis.P2RLayerEditor=(()=>{
      const accept=make('button',{type:'button',textContent:'Accept button',disabled:busy});accept.onclick=()=>{if(busy)return;save(key,{mode:'auto',...rules[key],button:true});render()};box.appendChild(accept);
      const dismiss=make('button',{type:'button',textContent:'Dismiss',disabled:busy});dismiss.onclick=()=>{if(busy)return;dismissed[key]=fingerprint;try{localStorage.setItem(dismissedKey,JSON.stringify(dismissed))}catch{status('Dismissed for this session; browser storage is unavailable.')}render()};box.appendChild(dismiss);row.appendChild(box);
     }
-    root.appendChild(row);
+    row.appendChild(make('span',{className:'ref-caption',textContent:'GAMEPLAY REFERENCE'}));root.appendChild(row);
    }
    if(matches.length>100)root.appendChild(make('p',{textContent:'Showing 100 of '+matches.length+' layers. Search to narrow the list.'}));
    if(!layers.length)root.appendChild(make('p',{textContent:'Read the selected design to choose individual layer modes.'}));
+   else if(!matches.length)root.appendChild(make('p',{textContent:'No layers match your search.'}));
   }
   el('layers-load').onclick=()=>{activeRequest='layers:'+ ++request;post('layers',{},activeRequest);status('Reading layer controls…')};
   el('layers-search').oninput=render;
   return {
    options:()=>({layerRules:structuredClone(rules)}),
-   setBusy(value){busy=value;el('layers-load').disabled=value;el('layers-search').disabled=value;for(const i of el('layer-list').querySelectorAll('input,select,button'))i.disabled=value||i.p2rUnavailable===true},
+   setBusy(value){busy=value;el('layers-load').disabled=value;el('layers-search').disabled=value;for(const i of el('layer-picker')?.querySelectorAll('button')||[])i.disabled=value;for(const i of el('layer-list').querySelectorAll('input,select,button'))i.disabled=value||i.p2rUnavailable===true},
    onMessage(m){
     if(m.requestId!==activeRequest||!activeRequest)return false;
     if(m.type==='error'){status('Cannot read layers: '+m.message);activeRequest=null;return true}
     if(m.type!=='layer-list')return false;
-    fileId=m.fileId;layers=m.layers;activeRequest=null;render();status('Read '+layers.length+' layers. Choices are saved locally per design file; prepare again after changes.');return true;
+    if(fileId!==m.fileId)selectedId='';fileId=m.fileId;layers=m.layers;activeRequest=null;render();if(el('layers-source'))el('layers-source').textContent=layers[0]?.name||'Current selection';if(el('layers-summary'))el('layers-summary').textContent=layers.length+' layers · Choices saved per file';status('Read '+layers.length+' layers. Choices are saved locally per design file; prepare again after changes.');return true;
    }
   };
  }

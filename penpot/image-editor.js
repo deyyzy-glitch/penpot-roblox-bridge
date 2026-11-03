@@ -63,7 +63,7 @@ globalThis.P2RImageEditor=(()=>{
  }
  function createSliceEditor(parent,s,changed){
   const panel=element('div',parent);panel.className='slice-editor';
-  const help=element('p',panel,'Drag the blue guides to keep corners and borders fixed. The center stretches. Arrow keys move a focused guide; Shift moves 10 pixels.');help.className='caption';
+  const help=element('p',panel,'Drag the green guides to keep corners and borders fixed. Arrow keys move a focused guide; Shift moves 10 pixels.');help.className='caption';
   const actions=element('div',panel);actions.className='slice-actions';
   const links=['Link Left / Right','Link Top / Bottom'].map((name,axis)=>{const label=element('label',actions);label.className='image-option';const input=element('input',label);input.type='checkbox';input.title=axis?'When enabled, match Bottom to Top.':'When enabled, match Right to Left.';label.append(document.createTextNode(' '+name));return input});
   const reset=element('button',actions,'Reset slice guides');reset.type='button';reset.title='Return all four slice insets to zero. Tint, glow and other image settings stay unchanged.';
@@ -91,7 +91,7 @@ globalThis.P2RImageEditor=(()=>{
    const {width,height}=s.result,enabled=s.slice.checked&&!s.slice.disabled;
    if(renderedPreview!==s.preview){source.width=width;source.height=height;source.getContext('2d').drawImage(s.preview,0,0,width,height);renderedPreview=s.preview}
    stage.style.setProperty('--slice-ratio',String(width/height));
-   panel.hidden=!s.slice.checked;panel.classList.toggle('inactive',!enabled);
+   panel.hidden=false;panel.classList.toggle('inactive',!enabled);help.hidden=!s.slice.checked;actions.hidden=!s.slice.checked;
    let rect;try{rect=sliceRect(s.edges.map(e=>e.value),width,height);note.textContent=s.slice.checked?`${width} × ${height} source pixels · Guides update the previews. Apply image settings to save.`:'Enable nine-slice scaling to adjust the guides.'}catch(e){note.textContent=e.message}
    note.classList.toggle('invalid',!rect&&s.slice.checked);center.hidden=!enabled||!rect;
    if(rect){center.style.left=100*rect[0]/width+'%';center.style.top=100*rect[1]/height+'%';center.style.width=100*(rect[2]-rect[0])/width+'%';center.style.height=100*(rect[3]-rect[1])/height+'%'}
@@ -101,10 +101,12 @@ globalThis.P2RImageEditor=(()=>{
   }
   s.slice.addEventListener('change',()=>{refresh();changed()});
   s.edges.forEach((input,i)=>input.addEventListener('input',()=>{if(links[i%2].checked){if(input.value.trim()!==''&&Number.isFinite(Number(input.value)))input.value=String(Math.max(0,Math.min(limit(i),Number(input.value))));s.edges[opposite[i]].value=input.value}refresh();changed()}));
-  refresh();return {refresh};
+  refresh();return {refresh,panel};
  }
  async function create(doc,assets,api){
   const container=document.getElementById('image-controls');container.replaceChildren();const nodes=new Map();const walk=n=>{nodes.set(n.id,n);n.children.forEach(walk)};walk(doc.design);const states=[],urls=[];
+  const chooser=element('label',container,'PREPARED SURFACE');chooser.className='image-choice';chooser.hidden=true;const select=element('select',chooser);select.setAttribute('aria-label','Prepared image surface');const cards=[];
+  select.onchange=()=>{if(api.busy())return;cards.forEach((card,index)=>card.hidden=index!==Number(select.value))};
   const image=async hash=>{const r=await fetch('/assets/'+hash+'/png',{headers:{Authorization:'Bearer '+api.token}});if(!r.ok)throw Error('Cannot load image preview');const url=URL.createObjectURL(await r.blob());const img=new Image();try{await new Promise((ok,no)=>{img.onload=ok;img.onerror=()=>no(Error('Image preview failed'));img.src=url});return img}finally{URL.revokeObjectURL(url)}};
   const dirty=()=>api.dirty('Image settings changed. Apply the settings before sending.');
   const checkbox=(parent,label,value=false)=>{const line=element('label',parent);line.className='image-option';const input=element('input',line);input.type='checkbox';input.checked=value;line.append(document.createTextNode(' '+label));input.onchange=dirty;return input};
@@ -143,14 +145,18 @@ globalThis.P2RImageEditor=(()=>{
    if(s.skip)continue;
    if(!s.eligible)continue;
    const card=element('section',container);card.className='card';card.addEventListener('input',()=>s.dirty=true);card.addEventListener('change',()=>s.dirty=true);element('h2',card,a.name);s.note=element('p',card);s.note.className='muted';s.tint=checkbox(card,'Reuse monochrome image as a tintable mask',s.autoTint);s.dilate=checkbox(card,'Experimental RGB edge dilation (alpha unchanged)');s.glow=checkbox(card,'Add a silhouette glow');
+   const option=element('option',select,`${cards.length+1}. ${a.name}`);option.value=String(cards.length);card.hidden=cards.length>0;cards.push(card);chooser.hidden=cards.length<2;
    const row=element('div',card);row.className='image-fields';s.radius=number(row,'Glow radius',8,1,32);s.glowOpacity=number(row,'Glow opacity',.7,0,1);s.glowOpacity.step=.1;const gl=element('label',row,'Glow color ');s.glowColor=element('input',gl);s.glowColor.type='color';s.glowColor.value='#85b5ff';s.glowColor.oninput=dirty;
-   s.slice=checkbox(card,'Use nine-slice scaling');const edges=element('div',card);edges.className='image-fields';s.edges=['Left','Top','Right','Bottom'].map(name=>number(edges,name,0,0,1023));
+   s.slice=checkbox(card,'Use nine-slice scaling');s.slice.setAttribute('aria-label','Use nine-slice scaling');const toggle=s.slice.parentElement;toggle.className='switch-row slice-toggle';toggle.replaceChildren();const caption=element('span',toggle);element('strong',caption,'Nine-slice');toggle.append(s.slice);element('i',toggle);const edges=element('div',card);edges.className='image-fields';s.edges=['Left','Top','Right','Bottom'].map(name=>number(edges,name,0,0,1023));
    const changed=()=>{s.dirty=true;dirty();if(s.previews)render(s)};
    s.sliceEditor=createSliceEditor(card,s,changed);
    const suggest=element('button',card,'Suggest slices from source corners');suggest.className='secondary';const bounds=s.result.bounds,ratio=s.result.width/bounds.width;const canSuggest=n.radius>0&&n.radii?.every(v=>v===n.radius)&&Math.abs(bounds.x)<.1&&Math.abs(bounds.y)<.1&&Math.abs(bounds.width-n.width)<.1&&Math.abs(bounds.height-n.height)<.1;
    suggest.disabled=!canSuggest;suggest.onclick=()=>{const v=Math.min(Math.ceil(n.radius*ratio),Math.floor(Math.min(s.result.width,s.result.height)/2)-1);s.edges.forEach(e=>e.value=Math.max(0,v));s.slice.checked=true;s.sliceEditor.refresh();changed()};
-   const apply=element('button',card,'Apply image settings');apply.onclick=async()=>{if(api.busy())return;api.processing(true);try{await process(s);s.dirty=false;if(states.some(v=>v.dirty))api.dirty('Apply the remaining changed image settings before sending.');else {api.ready();api.status('Image settings applied. Review the previews, then send to Studio.')}}catch(e){s.dirty=true;api.dirty(e.message)}finally{api.processing(false);s.sliceEditor.refresh()}};
+   const apply=element('button',card,'Apply image settings');apply.className='apply-image';apply.onclick=async()=>{if(api.busy())return;api.processing(true);try{await process(s);s.dirty=false;if(states.some(v=>v.dirty))api.dirty('Apply the remaining changed image settings before sending.');else {api.ready();api.status('Image settings applied. Review the previews, then send to Studio.')}}catch(e){s.dirty=true;api.dirty(e.message)}finally{api.processing(false);s.sliceEditor.refresh()}};
    s.previews=element('div',card);s.previews.className='image-previews';render(s);s.note.textContent=s.result.tintColor?'Tintable mask ready. Colors remain editable in Studio.':'Source colors preserved. Slicing and glow are optional styling changes.';
+   card.insertBefore(s.sliceEditor.panel,s.slice.parentElement);
+   const styling=element('details',card);styling.className='notes image-style';element('summary',styling,'Tint, edges & glow');styling.append(s.tint.parentElement,s.dilate.parentElement,s.glow.parentElement,row);
+   const previews=element('details',card);previews.className='notes image-result-previews';element('summary',previews,'Stretch previews');previews.append(s.previews);card.append(apply);
   }
   return {destroy(){for(const url of urls)URL.revokeObjectURL(url);container.replaceChildren()},states};
  }
