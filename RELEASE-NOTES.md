@@ -1,22 +1,52 @@
 # Penpot Bridge 3.0.0 — redesigned interfaces and native upgraded gradients
 
-Update both the helper and Studio plugin to 3.0.0. Close the old helper before launching the new download, reopen the Penpot companion, and restart Studio after replacing a local plugin. Existing imports and older version 1–5 documents remain supported; prepare again to use the new gradient mapping. See the [interface guide](docs/UI-GUIDE.md) for the new navigation.
+## Updating to 3.0.0
 
-- Studio's charcoal interface now uses the approved Penpot boards compiled through the actual importer. Native text, geometry and locally rendered icon masks replace the earlier reconstruction. Existing receive, JSON, safe review, mappings, templates and manual verification actions remain connected.
-- Reusable-template cards put the heading and explanation before the key field and mapping button, with consistent 16px outer padding and 8px gaps. Reused components no longer inherit source-artboard sorting or place editable fields behind card backgrounds. The connection and verification introduction cards use the same corrected ordering.
-- The desktop canvas stays 624 pixels wide and caps at 860 pixels high. Short windows scroll without scaling text; the minimum supported content height is 500 pixels. Light and dark preferences remain available. The empty bottom status strip is removed.
-- Import progress follows validation, asset resolution, native instance creation and finalization. Completion shows actual creation/update/image/preserved-property counts; verification is an explicit action.
-- Validation: 13 live Studio workflow checks and 30 final layout checks across five viewport sizes and both themes, plus native decoding of packaged compressed view data.
-- Penpot's companion now follows its approved charcoal design, with a compact sidebar, fixed desktop proportions, light/dark appearances and inline progress/error notices instead of a permanent footer. The helper connection remains accessible from the sidebar.
-- Layers uses a searchable selection list and one editor at a time, retaining conversion modes, native font weights, references, templates and optional button suggestions. Images has a surface selector, an always-visible source preview, green slice guides, collapsible styling and stretch previews, and the existing explicit Apply action. Drafts stay separate across surfaces and still block sending until applied.
-- Companion validation: 83 Node tests, 20 browser page/theme/layout checks at normal and short desktop heights, 12 image-editor regressions, and manual preparation, retry, transfer, bundle action, layer selection/weight and image switching checks against an isolated real helper with a synthetic Penpot parent. No live Penpot document or Roblox place was modified for these companion checks.
+Update **both the helper and Studio plugin** to 3.0.0. Close the old helper before launching the new download, reopen the Penpot companion, and restart Studio after replacing a local plugin. Existing imports and older version 1–5 documents remain supported; prepare again to use the new gradient mapping.
 
-- Compatible radial fills now use editable native circular or elliptical UIGradients. Shifted centers are preserved. Penpot ellipse proportions that cannot be represented by the tested Roblox properties retain PNG fallback; Image mode remains available.
-- Native linear fills now support shifted, reversed, diagonal and shortened spans. Mapping uses the SVG object-bounding-box normal and the released renderer's edge-intersection extent rather than treating normalized coordinates as pixel vectors.
-- The existing bounded color correction remains enabled: it still reduced measured differences against actual Penpot exports in the running client. Colors are approximate; high-contrast multi-stop fills and Roblox's reported banding can still differ.
-- New native-gradient exports use document version 6 and require updated helper and Studio plugin builds. Existing version 1–5 exports remain supported. No Studio beta switch or custom runtime gradient renderer is added.
-- Image fallbacks retain repeated hard-edge stops and more than twenty source stops without creating an invalid native sequence (up to 1024 baked stops).
-- Validation: 82 Node tests, 15 new live Studio gradient checks and 11 existing gradient checks. Ten native samples were imported from a real Penpot board and compared against its PNG export in a Studio-hosted running desktop client (0.745.0.7451137). Unsupported narrow-ellipse fallback was checked separately. No cross-platform or standalone production-client claim is made.
+See the [interface guide](https://github.com/deyyzy-glitch/penpot-roblox-bridge/blob/main/docs/UI-GUIDE.md) for the new navigation.
+
+## Roblox Studio interface
+
+- **Redesigned workspace:** a charcoal interface with clearer navigation, improved spacing and light/dark preferences. Receive, JSON, review, mappings, templates and manual verification remain available.
+
+- **Clearer template mapping:** the heading and explanation now appear before the key field and mapping button. Template fields remain visible and accessible, and connection and verification cards follow the same reading order.
+
+- **Consistent desktop proportions:** the interface keeps a fixed-width canvas instead of stretching its text and controls. Short windows scroll, and the empty bottom status strip is removed.
+
+- **Import progress and results:** progress follows validation, asset resolution, UI creation and finalization. Completion shows actual creation, update, image and preserved-property counts. Verification remains an explicit action.
+
+## Penpot companion interface
+
+- **Matching appearance:** a compact sidebar, consistent desktop proportions, light/dark preferences and inline progress/error notices. The helper connection remains accessible from the sidebar.
+
+- **Searchable layer controls:** Layers uses a searchable selection list and one editor at a time, retaining conversion modes, native font weights, references, templates and optional button suggestions.
+
+- **Clearer image editing:** Images has a surface selector, an always-visible source preview, green slice guides, collapsible styling and stretch previews. Drafts stay separate across surfaces; click **Apply image settings** before sending.
+
+## Gradient improvements
+
+- **Native radial fills:** compatible radial fills now use editable native circular or elliptical UIGradients. Shifted centers are preserved. Unsupported ellipse proportions retain PNG fallback, and Image mode remains available.
+
+- **More accurate linear placement:** native linear fills now support shifted, reversed, diagonal and shortened spans.
+
+- **Color fidelity:** the existing color correction remains enabled after comparison with Penpot exports in a running Roblox client. Colors are approximate; high-contrast multi-stop fills and banding can still differ.
+
+- **Complex gradient fallbacks:** image fallbacks retain repeated hard-edge stops and more than twenty source stops without creating an invalid native gradient.
+
+- **Compatibility:** new native-gradient exports use document version 6 and require both updated components. Existing version 1–5 exports remain supported. No Studio beta switch is required.
+
+## Validation
+
+- **83 automated tests passed** across the helper, exporter, image tools and plugin packaging.
+
+- **Studio interface:** 13 workflow checks and 30 final layout checks across five viewport sizes and both themes.
+
+- **Penpot interface:** 20 browser page/theme/layout checks at normal and short desktop heights, plus 12 image-editor regression checks. Preparation, retry, transfer, bundle download, layer controls and image switching were also checked.
+
+- **Native gradients:** 26 live Studio checks, with ten samples compared against real Penpot PNG exports in a Studio-hosted running desktop client. Unsupported narrow-ellipse fallback was checked separately.
+
+Validation covers the tested desktop environment; it does not establish identical rendering across every device or a separately launched production client.
 
 # Penpot Bridge 2.7.6 — visual nine-slice editor and optional button suggestions
 
